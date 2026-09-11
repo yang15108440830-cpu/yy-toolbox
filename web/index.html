@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>YY工具箱</title>
+<style>
+  /* ============================================================
+     YY工具箱 · Fluent Design 风格（WinUI 3 官方色板/圆角/动效体系）
+     双主题跟随系统 prefers-color-scheme；无框架无外部依赖。
+     ============================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    /* 圆角（Win11 Geometry：控件4 / 卡片浮层8 / 弹窗12） */
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px;
+    /* 动效三档（官方：按下83 / hover150 / 入场300；入场decelerate出场accelerate） */
+    --ease-out: cubic-bezier(0, 0, 0, 1);
+    --ease-in: cubic-bezier(1, 0, 1, 1);
+    --ease-hover: cubic-bezier(0.33, 0, 0.67, 1);
+  }
+
+  /* ---------- 浅色主题（WinUI 3 官方值） ---------- */
+  :root {
+    --bg-base: #F3F3F3;                 /* SolidBackgroundFillColorBase */
+    --layer: rgba(255, 255, 255, 0.55); /* 内嵌层容器（待办区） */
+    --card-bg: rgba(255, 255, 255, 0.70);       /* CardBackgroundFillColorDefault */
+    --card-bg-hover: rgba(255, 255, 255, 0.92);
+    --card-border: rgba(0, 0, 0, 0.09);
+    --divider: rgba(0, 0, 0, 0.07);
+    --text-1: rgba(0, 0, 0, 0.90);      /* TextFillColorPrimary */
+    --text-2: rgba(0, 0, 0, 0.64);      /* TextFillColorSecondary */
+    --text-3: rgba(0, 0, 0, 0.52);      /* TextFillColorTertiary（描述文字加深保可读） */
+    --accent: #0067C0; --on-accent: #FFFFFF;
+    --accent-subtle: rgba(0, 103, 192, 0.10);
+    --subtle-hover: rgba(0, 0, 0, 0.04);
+    --menu-bg: rgba(249, 249, 249, 0.86);
+    --modal-bg: rgba(249, 249, 249, 0.88);
+    --surface: rgba(255, 255, 255, 0.62);          /* Acrylic 卡面（透出背景图） */
+    --surface-hover: rgba(255, 255, 255, 0.78);
+    --bg-mask: rgba(238, 242, 248, 0.80);          /* 背景图遮罩：浅色（80% 保可读又透出图） */
+    --cnt-active-bg: rgba(255, 255, 255, 0.28);
+    --danger: #C42B1C; --danger-subtle: rgba(196, 43, 28, 0.10);
+    --shadow-s: 0.14;                   /* 阴影强度（深色主题加深） */
+    --scrollbar: rgba(0, 0, 0, 0.25); --scrollbar-hover: rgba(0, 0, 0, 0.45);
+    --noise-op: 0.030;
+  }
+  /* ---------- 深色主题 ---------- */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-base: #202020;
+      --layer: rgba(255, 255, 255, 0.038);
+      --card-bg: rgba(255, 255, 255, 0.051);
+      --card-bg-hover: rgba(255, 255, 255, 0.088);
+      --card-border: rgba(255, 255, 255, 0.07);
+      --divider: rgba(255, 255, 255, 0.08);
+      --text-1: #FFFFFF;
+      --text-2: rgba(255, 255, 255, 0.77);
+      --text-3: rgba(255, 255, 255, 0.53);
+      --accent: #4CC2FF; --on-accent: #000000;   /* 官方：深色强调填充用黑字 */
+      --accent-subtle: rgba(76, 194, 255, 0.12);
+      --subtle-hover: rgba(255, 255, 255, 0.06);
+      --menu-bg: rgba(43, 43, 43, 0.86);
+      --modal-bg: rgba(43, 43, 43, 0.86);
+      --surface: rgba(30, 30, 32, 0.58);
+      --surface-hover: rgba(38, 38, 41, 0.68);
+      --bg-mask: rgba(10, 15, 26, 0.64);           /* 深色薄（与夜景底图融合） */
+      --cnt-active-bg: rgba(0, 0, 0, 0.18);
+      --danger: #FF99A4; --danger-subtle: rgba(255, 153, 164, 0.12);
+      --shadow-s: 0.26;
+      --scrollbar: rgba(255, 255, 255, 0.22); --scrollbar-hover: rgba(255, 255, 255, 0.40);
+      --noise-op: 0.050;
+    }
+  }
+
+  html, body { height: 100%; }
+  /* ========== 背景图层（web/bg/ 图片 + 主题遮罩；body.bg-off 时整体隐藏回落纯 Mica） ========== */
+  #bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background-size: cover; background-position: center 40%;   /* 竖图偏上取景保主体 */
+    background-repeat: no-repeat;
+  }
+  #bg-mask { position: fixed; inset: 0; z-index: 0; background: var(--bg-mask); }
+  body.bg-off #bg-layer, body.bg-off #bg-mask { display: none; }
+  body {
+    font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI",
+                 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 20px;
+    color: var(--text-1); overflow: hidden; user-select: none;
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    /* Mica 模拟：底色 + 两个低饱和径向光斑（"桌面色隐约透出"） */
+    background-color: var(--bg-base);
+    background-image:
+      radial-gradient(1100px 500px at 18% -8%, rgba(76, 194, 255, 0.055), transparent 60%),
+      radial-gradient(900px 480px at 105% 112%, rgba(139, 95, 199, 0.045), transparent 55%);
+    background-attachment: fixed;
+  }
+  /* 面板唤起入场动画（每次可见时 JS 重放；transform 会临时形成 backdrop root，250ms 内恢复） */
+  @keyframes app-in { from { opacity: 0; transform: scale(0.97) translateY(8px); } }
+  body.app-in { animation: app-in 250ms var(--ease-out); }
+  /* Mica 颗粒感：SVG feTurbulence 噪点（data URI 零依赖） */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 1;
+    pointer-events: none; opacity: var(--noise-op); mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ========== 顶栏 ========== */
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px 8px; position: relative; z-index: 2;
+  }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; position: relative;
+    background:
+      radial-gradient(28px 20px at 28% 18%, rgba(255, 255, 255, 0.45), transparent 70%),
+      linear-gradient(135deg, #22B8F0, #0067C0 55%, #8B5CF6);
+    color: #fff; font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 2px rgba(0,0,0,0.15),
+                0 2px 8px rgba(0,103,192,0.40);
+  }
+  .logo-text { font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .logo-hint {
+    font-size: 12px; color: var(--text-3); margin-left: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  header .spacer { flex: 1; }
+  header button.ghost {
+    border: none; background: transparent; color: var(--text-2);
+    border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px;
+    font-family: inherit; cursor: pointer;
+    transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  header button.ghost:hover { background: var(--subtle-hover); color: var(--text-1); }
+  header button.ghost:active { transform: scale(0.97); }
+  header button.ghost.danger:hover { background: var(--danger-subtle); color: var(--danger); }
+  header button.ghost.on { color: var(--accent); background: var(--accent-subtle); }   /* 背景开启态 */
+
+  /* ========== 分组标签行（胶囊式） ========== */
+  nav#tabs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 6px 18px 2px; position: relative; z-index: 2;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 13px; border-radius: 999px; border: 1px solid transparent;
+    background: transparent; font-size: 13px; font-family: inherit; color: var(--text-2);
+    cursor: pointer; white-space: nowrap;
+    transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover),
+                box-shadow 150ms var(--ease-hover);
+  }
+  .tab:hover { background: var(--subtle-hover); color: var(--text-1); }
+  .tab:active { transform: scale(0.97); }
+  .tab.active {
+    background: var(--accent); color: var(--on-accent); font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
+    animation: tab-pop 200ms var(--ease-out);
+  }
+  @keyframes tab-pop { from { transform: scale(0.92); } 60% { transform: scale(1.03); } to { transform: scale(1); } }
+  .tab .cnt {
+    font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 999px;
+    background: rgba(128, 128, 128, 0.16); opacity: 0.9;
+  }
+  .tab.active .cnt { background: var(--cnt-active-bg); }
+  .tab.drag-over { box-shadow: 0 0 0 2px var(--accent); background: var(--accent-subtle); }
+  .tab.dragging { opacity: 0.4; }
+  .tab.add { border-style: dashed; border-color: var(--text-3); color: var(--text-2); font-size: 13px; }
+  .tab.add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
+
+  /* ========== 卡片区（固定两行、列向流动 + 横向滚动） ========== */
+  main { padding: 12px 18px 4px; flex-shrink: 0; position: relative; z-index: 2; }
+  #grid {
+    display: grid; gap: 12px; overflow-x: auto; padding-bottom: 8px;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 286px;              /* 三列恰好填满 920 宽窗口，消除右侧稀疏 */
+    scroll-behavior: smooth;
+  }
+  /* 横向滚动时两端 24px 渐隐（JS 按溢出状态挂类，避免不溢出时误裁） */
+  #grid.scrollable {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  }
+  .card {
+    display: flex; gap: 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--card-border); border-radius: 10px;
+    padding: 12px 14px; cursor: pointer; position: relative; overflow: hidden;
+    -webkit-backdrop-filter: blur(24px) saturate(1.25);   /* Acrylic：透出背景图 */
+    backdrop-filter: blur(24px) saturate(1.25);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10),
+                0 2px 6px rgba(0, 0, 0, calc(var(--shadow-s) * 0.8)),
+                0 0 2px rgba(0, 0, 0, 0.12);
+    transition: transform 150ms var(--ease-hover), box-shadow 150ms var(--ease-hover),
+                background-color 150ms var(--ease-hover), border-color 150ms var(--ease-hover);
+    /* stagger 入场：每卡延迟 35ms（backwards 保证延迟期间保持初始帧） */
+    animation: card-in 300ms var(--ease-out) backwards;
+    animation-delay: calc(var(--i, 0) * 35ms);
+  }
+  @keyframes card-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+  .card:hover {
+    background: var(--surface-hover);
+    transform: translateY(-2px);
+    border-color: var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16),
+                0 8px 20px rgba(0, 0, 0, var(--shadow-s)), 0 0 2px rgba(0, 0, 0, 0.12);
+  }
+  /* hover 光泽扫过（高级感细节）：斜向高光带从左到右 */
+  .card::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.14) 50%, transparent 58%);
+    transform: translateX(-110%);
+  }
+  .card:hover::after { transform: translateX(110%); transition: transform 550ms var(--ease-hover); }
+  .cicon { transition: transform 150ms var(--ease-hover); color: #fff; }
+  .card:hover .cicon { transform: scale(1.06); }   /* 图标随卡片呼吸微放 */
+  .card:active { transform: translateY(0) scale(0.98); transition-duration: 83ms; }
+  .card.dragging { opacity: 0.35; }
+  .card.insert-before { box-shadow: -3px 0 0 0 var(--accent); }
+  .card.insert-after { box-shadow: 3px 0 0 0 var(--accent); }
+  /* 类型图标容器（渐变 + 顶部内高光，SVG 白线稿） */
+  .cicon {
+    width: 44px; height: 44px; border-radius: 11px; flex: none;
+    display: grid; place-items: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), inset 0 -1px 2px rgba(0, 0, 0, 0.12),
+                0 2px 5px rgba(0, 0, 0, 0.18);
+  }
+  .cicon.web  { background: linear-gradient(135deg, #6FB3FF, #2563EB); }
+  .cicon.desk { background: linear-gradient(135deg, #C9B8FF, #7C3AED); }
+  .cicon.bat  { background: linear-gradient(135deg, #7DEFC0, #059669); }
+  .cicon.dir  { background: linear-gradient(135deg, #FFD48A, #E8930C); }
+  /* 自定义应用：白底容器承托 exe 原始图标（图标自带色彩，不用渐变底） */
+  .cicon.app { background: rgba(255, 255, 255, 0.95); color: #5B5B60; }
+  .cicon.app img { width: 24px; height: 24px; border-radius: 3px; display: block; }
+  .cbody { flex: 1; min-width: 0; }
+  .card .name { display: flex; align-items: center; gap: 7px; }
+  .card .name .nm { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .name .t {
+    font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; flex-shrink: 0;
+  }
+  .t.web  { background: rgba(37, 99, 235, 0.12);  color: #2563EB; }
+  .t.desk { background: rgba(124, 58, 237, 0.12); color: #7C3AED; }
+  .t.bat  { background: rgba(5, 150, 105, 0.12);  color: #059669; }
+  .t.app  { background: rgba(120, 113, 108, 0.14); color: #78716C; }
+  .t.dir  { background: rgba(232, 147, 12, 0.14); color: #B45309; }
+  @media (prefers-color-scheme: dark) {   /* 深色下徽标提亮保对比 */
+    .t.web  { color: #7AB8FF; }
+    .t.desk { color: #C4B5FD; }
+    .t.bat  { color: #6EE7B7; }
+    .t.app  { color: #A8A29E; }
+    .t.dir  { color: #FFD48A; }
+  }
+  .card .desc {
+    margin-top: 4px; font-size: 12px; color: var(--text-3); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .empty {
+    grid-column: 1 / -1; color: var(--text-3); font-size: 13px; padding: 26px 0;
+    text-align: center; animation: fade-in 300ms var(--ease-out) both;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .empty .eicon { font-size: 30px; opacity: 0.55; filter: saturate(0.7); }
+  /* tabs 区底部 hairline 渐变分隔（左右淡出） */
+  nav#tabs::after {
+    content: ""; display: block; height: 1px; margin: 8px 18px 0;
+    background: linear-gradient(90deg, transparent, var(--divider) 18%, var(--divider) 82%, transparent);
+  }
+  @keyframes fade-in { from { opacity: 0; } }
+
+  /* ========== 底部区：左待办 / 右小工具（左右分割） ========== */
+  #bottom {
+    flex: 1; display: flex; gap: 12px; min-height: 0;
+    margin: 8px 18px 14px; position: relative; z-index: 2;
+  }
+  /* ========== 待办面板（左） ========== */
+  #todo-panel {
+    flex: 1.35; display: flex; flex-direction: column; min-height: 0;
+    padding: 6px 14px 4px;
+    background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+    -webkit-backdrop-filter: blur(24px) saturate(1.25);
+    backdrop-filter: blur(24px) saturate(1.25);
+  }
+  #todo-head { display: flex; align-items: center; gap: 8px; padding: 7px 2px 6px; }
+  #todo-head .tico { color: var(--accent); display: inline-flex; }
+  #todo-head .title { font-size: 13px; font-weight: 600; }
+  #todo-head .cnt { font-size: 11px; font-weight: 600; color: var(--text-3); }
+  .mini-btn {
+    border: none; background: transparent; color: var(--text-2);
+    border-radius: var(--radius-sm); padding: 3px 10px; font-size: 12px; font-family: inherit;
+    cursor: pointer; transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  .mini-btn:hover { background: var(--subtle-hover); color: var(--text-1); }
+  #todo-list { flex: 1; overflow-y: auto; min-height: 168px; padding-right: 4px; }  /* 保底 6 行可见 */
+  .todo {
+    display: flex; align-items: center; gap: 10px; padding: 5px 6px; font-size: 14px;
+    border-radius: var(--radius-sm);
+    transition: background-color 150ms var(--ease-hover), opacity 180ms var(--ease-in), transform 180ms var(--ease-in);
+  }
+  .todo:hover { background: var(--subtle-hover); }
+  .todo.removing { opacity: 0; transform: translateX(16px); }
+  .todo.fresh { animation: todo-in 250ms var(--ease-out); }   /* 新增待办滑入 */
+  @keyframes todo-in { from { opacity: 0; transform: translateX(-10px); } }
+  .todo .box {
+    width: 18px; height: 18px; border: 1.5px solid var(--card-border); border-radius: 5px;
+    cursor: pointer; flex-shrink: 0; display: grid; place-items: center; color: var(--on-accent);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+    transition: background-color 150ms var(--ease-hover), border-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  .todo .box svg { opacity: 0; transition: opacity 150ms var(--ease-hover); }
+  .todo .box:hover { border-color: var(--accent); color: var(--accent); }
+  .todo .box:hover svg { opacity: 0.55; }
+  .todo .box:active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .todo .box:active svg { opacity: 1; }
+  .todo .txt { flex: 1; min-width: 0; word-break: break-all; cursor: default; }
+  .todo .time { font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+  #todo-input-row { display: flex; gap: 8px; padding: 7px 2px 10px; }
+  #todo-input {
+    flex: 1; padding: 7px 12px; border: 1px solid var(--card-border); border-radius: var(--radius-md);
+    font-size: 13px; outline: none; font-family: inherit; color: var(--text-1); background: var(--card-bg);
+    transition: border-color 150ms var(--ease-hover), box-shadow 150ms var(--ease-hover);
+  }
+  #todo-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  #todo-input::placeholder { color: var(--text-3); }
+  .todo-empty { color: var(--text-3); font-size: 12px; padding: 10px 6px; }
+
+  /* ========== 右侧小工具区（tab 可切换，番茄钟为首个） ========== */
+  #widget-panel {
+    flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0;
+    padding: 6px 12px 10px;
+    background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+    -webkit-backdrop-filter: blur(24px) saturate(1.25);
+    backdrop-filter: blur(24px) saturate(1.25);
+  }
+  #widget-tabs { display: flex; gap: 4px; padding: 2px 0 6px; }
+  .wtab {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 11px; border-radius: 999px; font-size: 12px; font-family: inherit;
+    color: var(--text-2); background: transparent; border: none; cursor: pointer;
+    transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  .wtab:hover { background: var(--subtle-hover); }
+  .wtab.active { background: var(--accent-subtle); color: var(--accent); font-weight: 600; }
+  #widget-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .widget { flex: 1; display: none; flex-direction: column; align-items: center; min-height: 0; animation: fade-in 250ms var(--ease-out); }
+  /* 日报看板需要子项拉满宽度：.widget 的 align-items:center 会把 .rr 收缩成内容宽，
+     nowrap 摘要把整链撑出边界（用户截图实锤）——覆盖为 stretch */
+  #w-report { align-items: stretch; width: 100%; }
+  #w-report .rw-recent { width: 100%; }
+  .widget.show { display: flex; }
+  #w-notes { align-items: stretch; }   /* 记事本编辑区拉伸全宽（center 会让宽度随内容伸缩） */
+
+  /* ---- 番茄钟 ---- */
+  .pomo-ring { position: relative; flex: 1; display: grid; place-items: center; min-height: 0; padding: 4px 0; }
+  .pomo-ring svg { max-height: 100%; }
+  .ring-bg { stroke: var(--divider); }
+  .ring-fg { stroke: var(--accent); transition: stroke-dashoffset 0.6s linear, stroke 300ms var(--ease-hover); }
+  .pomo-ring.break .ring-fg { stroke: #10B981; }
+  .pomo-ring.done .ring-fg { animation: pomo-pulse 1.2s var(--ease-hover) infinite; }
+  @keyframes pomo-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .pomo-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .pomo-time { font-size: 30px; font-weight: 600; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+  .pomo-state { font-size: 12px; color: var(--text-3); }
+  .pomo-btns { display: flex; align-items: center; gap: 8px; width: 100%; padding-top: 6px; }
+  .pomo-chip {
+    border: 1px solid var(--card-border); background: transparent; color: var(--text-2);
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; font-family: inherit; cursor: pointer;
+    transition: border-color 150ms var(--ease-hover), color 150ms var(--ease-hover), background-color 150ms var(--ease-hover);
+  }
+  .pomo-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
+  .pomo-go {
+    border: none; background: var(--accent); color: var(--on-accent); font-weight: 600;
+    border-radius: 999px; padding: 5px 18px; font-size: 13px; font-family: inherit; cursor: pointer;
+    transition: filter 150ms var(--ease-hover), transform 83ms var(--ease-hover);
+  }
+  .pomo-go:hover { filter: brightness(1.08); }
+  .pomo-go:active { transform: scale(0.97); }
+  .pomo-cfg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pomo-cfg-row label { font-size: 13px; color: var(--text-2); flex: 1; }
+  #modal .pomo-cfg-row input {
+    width: 90px; padding: 6px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    font-size: 13px; outline: none; font-family: inherit; color: var(--text-1); background: var(--card-bg);
+    transition: border-color 150ms var(--ease-hover), box-shadow 150ms var(--ease-hover);
+  }
+  #modal .pomo-cfg-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  /* ---- 记事本（富文本） ---- */
+  .notes-toolbar {
+    display: flex; align-items: center; gap: 2px; padding: 2px 0 6px; flex-wrap: wrap;
+  }
+  .nt-btn {
+    min-width: 26px; height: 24px; padding: 0 7px; border: none; background: transparent;
+    color: var(--text-2); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+    cursor: pointer; transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  .nt-btn:hover { background: var(--subtle-hover); color: var(--text-1); }
+  .nt-btn.on { background: var(--accent-subtle); color: var(--accent); }   /* 命令生效中 */
+  .nt-size { font-size: 11px; }
+  .nt-sep { width: 1px; height: 14px; background: var(--divider); margin: 0 5px; }
+  #notes-editor {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px;
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md);
+    font-size: 13px; line-height: 1.7; color: var(--text-1); outline: none; word-break: break-all;
+    -webkit-user-select: text; user-select: text;   /* 编辑区放开选择（面板全局禁选） */
+  }
+  #notes-editor:focus { border-color: var(--accent); }
+  #notes-editor:empty::before { content: attr(data-ph); color: var(--text-3); pointer-events: none; }
+  #notes-pager {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding-top: 6px; flex-shrink: 0;
+  }
+  #notes-pager .nt-btn { font-size: 11px; }
+  #notes-pager .nt-btn:disabled { opacity: 0.35; cursor: default; }
+  #notes-pager .nt-btn:disabled:hover { background: transparent; color: var(--text-2); }
+  #np-ind { font-size: 11px; color: var(--text-3); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+  #np-del:hover { background: var(--danger-subtle) !important; color: var(--danger) !important; }
+
+  /* ---- 待办日历（模态内月历） ---- */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .cal-title { font-size: 13px; font-weight: 600; }
+  .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-cell {
+    position: relative; aspect-ratio: 1.25; border: none; background: transparent;
+    font-family: inherit; font-size: 12px; color: var(--text-1); border-radius: 6px; cursor: pointer;
+    transition: background-color 150ms var(--ease-hover);
+  }
+  .cal-cell:hover { background: var(--subtle-hover); }
+  .cal-cell.blank { pointer-events: none; }
+  .cal-cell.today { box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 600; }
+  .cal-cell.sel { background: var(--accent-subtle); }
+  .cal-cell.has { font-weight: 600; }
+  .cal-cell i {
+    position: absolute; top: 2px; right: 3px; font-style: normal;
+    font-size: 9px; font-weight: 600; line-height: 13px; min-width: 13px; padding: 0 3px;
+    border-radius: 999px; background: var(--accent); color: var(--on-accent);
+  }
+  /* 徽标三色：红=全未闭环 / 黄=部分闭环 / 绿=全部闭环（done/total） */
+  .cal-cell i.r { background: #E5484D; }
+  .cal-cell i.y { background: #F5A623; color: #4A2B00; }
+  .cal-cell i.g { background: #10B981; }
+  .cal-detail { margin-top: 10px; border-top: 1px solid var(--divider); padding-top: 8px; min-height: 64px; max-height: 148px; overflow-y: auto; }
+  .cal-detail .cd-title { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+  .cal-detail .cd-empty { font-size: 12px; color: var(--text-3); padding: 14px 0; text-align: center; }
+  .cal-detail .cd-item { display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 3px 2px; }
+  .cal-detail .cd-item .st { flex: none; color: var(--accent); font-size: 10px; }
+  .cal-detail .cd-item.done .st { color: var(--text-3); }
+  .cal-detail .cd-item.done .tx { color: var(--text-3); text-decoration: line-through; }
+  .cal-detail .cd-item .tm { flex: none; margin-left: auto; font-size: 11px; color: var(--text-3); }
+  /* 历史待办列表（模态内） */
+  #hist-list { max-height: 320px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .hist-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 4px; font-size: 13px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-item .txt { flex: 1; min-width: 0; word-break: break-all; color: var(--text-2); }
+  .hist-item .time { font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+  .hist-item .restore {
+    border: 1px solid var(--card-border); background: transparent; color: var(--text-2);
+    border-radius: var(--radius-sm); padding: 3px 12px; font-size: 12px; font-family: inherit;
+    cursor: pointer; flex-shrink: 0; transition: border-color 150ms var(--ease-hover), color 150ms var(--ease-hover), background-color 150ms var(--ease-hover);
+  }
+  .hist-item .restore:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
+
+  /* ---- 工作日报（分步向导）+ 日历日报角标 ---- */
+  #modal.wide { width: 650px; }   /* 日报向导宽模态 580→650（+12%，用户实锤编辑区偏窄） */
+  #modal textarea {
+    width: 100%; min-height: 170px; padding: 8px 10px; border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.6; outline: none;
+    font-family: Consolas, "Microsoft YaHei UI", monospace; color: var(--text-1);
+    background: var(--card-bg); resize: vertical;
+    transition: border-color 150ms var(--ease-hover), box-shadow 150ms var(--ease-hover);
+  }
+  #modal textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  #rw-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  #rw-head h3 { flex: 1; margin-bottom: 0; }
+  .rw-steps { display: flex; gap: 4px; margin-bottom: 12px; }
+  .rw-step { flex: 1; text-align: center; font-size: 11px; color: var(--text-3); padding: 4px 0 6px; border-bottom: 2px solid var(--divider); }
+  .rw-step.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .rw-step.done { color: var(--text-2); border-bottom-color: var(--accent); }
+  .rw-scan-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .rw-scan-row input { width: 158px; flex: none; }
+  .rw-scan-row .grow { flex: 1; font-size: 12px; color: var(--text-3); }
+  .rw-repo { border: 1px solid var(--card-border); border-radius: var(--radius-sm); margin-bottom: 4px; max-height: 200px; overflow-y: auto; }
+  .rw-repo-h { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12.5px; font-weight: 600; background: var(--subtle-hover); }
+  .rw-repo-h .cnt { margin-left: auto; font-size: 11px; color: var(--text-3); font-weight: 400; }
+  .rw-repo-h .rerr { margin-left: auto; font-size: 11px; color: var(--danger); font-weight: 400; }
+  .rw-ci { display: flex; align-items: baseline; gap: 7px; padding: 4px 10px 4px 27px; font-size: 12px; color: var(--text-2); position: relative; }
+  .rw-ci input { position: absolute; left: 9px; top: 7px; width: auto; padding: 0; }
+  .rw-ci .t { color: var(--text-3); font-size: 11px; flex: none; font-variant-numeric: tabular-nums; }
+  .rw-ci .h { color: var(--text-3); font-size: 11px; flex: none; }
+  .rw-ci .st { color: var(--text-3); font-size: 10.5px; flex: none; font-variant-numeric: tabular-nums; }
+  .rw-ci .s { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rw-empty { font-size: 12px; color: var(--text-3); text-align: center; padding: 14px 0; }
+  .rw-hint { font-size: 11.5px; color: var(--text-3); margin: 4px 0 8px; line-height: 1.5; }
+  .rw-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .rw-foot .state { font-size: 12px; color: var(--text-3); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rw-foot .state.busy { color: var(--accent); }
+  .rw-foot button { flex: none; white-space: nowrap; }   /* 窄宽下按钮/状态文字曾被 flex 压成竖排（用户实报丑） */
+  #modal button:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
+  /* AI 生成实时面板：盖在编辑框上，spinner + 思考过程滚动 */
+  .rw-editor-wrap { position: relative; }
+  /* 编辑/预览切换（预览=内置 md 渲染，工具纯离线不引 CDN） */
+  .rw-mode-bar { display: flex; margin-bottom: 6px; }
+  .rw-mode-bar button {
+    border: 1px solid var(--card-border); background: transparent; color: var(--text-2);
+    font-family: inherit; font-size: 11.5px; padding: 3px 14px; cursor: pointer;
+  }
+  .rw-mode-bar button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .rw-mode-bar button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
+  .rw-mode-bar button.on { background: var(--accent-subtle); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .rw-preview {
+    min-height: 240px; max-height: 420px; overflow-y: auto; padding: 10px 14px;
+    border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    background: var(--card-bg); font-size: 12.5px; line-height: 1.7; color: var(--text-1);
+    word-break: break-word;
+  }
+  .rw-preview h3, .rw-preview h4, .rw-preview h5, .rw-preview h6 { margin: 10px 0 4px; font-size: 13px; color: var(--text-1); }
+  .rw-preview h3 { color: var(--accent); }
+  .rw-preview p { margin: 4px 0; }
+  .rw-preview ul { margin: 4px 0; padding-left: 18px; }
+  .rw-preview li { margin: 2px 0; }
+  .rw-preview code { font-family: Consolas, monospace; font-size: 11.5px; background: var(--subtle-hover); border-radius: 4px; padding: 1px 5px; }
+  .rw-live {
+    position: absolute; inset: 0; display: none; flex-direction: column; gap: 8px;
+    background: var(--card-bg); border: 1px solid var(--accent); border-radius: var(--radius-sm);
+    padding: 12px 14px; overflow: hidden;
+  }
+  .rw-live-head { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--accent); flex: none; }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%; flex: none;
+    border: 2px solid var(--accent-subtle); border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .rw-live-think {
+    flex: 1; min-height: 0; overflow-y: auto; padding-top: 8px;
+    border-top: 1px dashed var(--divider);
+    font-size: 11px; line-height: 1.7; color: var(--text-3);
+    font-family: Consolas, "Microsoft YaHei UI", monospace;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .rw-form { display: grid; grid-template-columns: 88px 1fr; gap: 9px 10px; align-items: center; font-size: 12.5px; }
+  .rw-form label { color: var(--text-2); text-align: right; }
+  .rw-form .full { grid-column: 1 / -1; }
+  .rw-form textarea { min-height: 60px; }
+  .rw-form .sep { grid-column: 1 / -1; border-top: 1px solid var(--divider); margin: 2px 0; }
+  #modal select {
+    width: 100%; padding: 7px 8px; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    font-size: 13px; font-family: inherit; color: var(--text-1); background: var(--card-bg); outline: none;
+  }
+  .rs-list { border: 1px solid var(--card-border); border-radius: var(--radius-sm); margin-bottom: 6px; max-height: 96px; overflow-y: auto; }
+  .rs-repo { display: flex; align-items: center; gap: 6px; padding: 3px 4px 3px 8px; font-size: 12px; color: var(--text-2); border-bottom: 1px solid var(--divider); }
+  .rs-repo:last-child { border-bottom: none; }
+  .rs-repo .p { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rs-repo .mini-btn { padding: 1px 7px; font-size: 11px; }
+
+  /* ---- ★ 今日工作概览条（header 下极薄一行） ---- */
+  #today-bar {
+    display: flex; align-items: center; gap: 9px; padding: 4px 16px;
+    border-bottom: 1px solid var(--divider); font-size: 11.5px; color: var(--text-2);
+  }
+  #today-bar .tb-item {
+    background: none; border: none; font: inherit; color: inherit; cursor: pointer;
+    padding: 2px 7px; border-radius: 999px; white-space: nowrap; font-variant-numeric: tabular-nums;
+    transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  #today-bar .tb-item:hover { background: var(--subtle-hover); color: var(--accent); }
+  #today-bar .tb-item.done { color: #10B981; }   /* 日报已归档绿 */
+  #today-bar .tb-sep { color: var(--text-3); }
+
+  /* ---- ★ 日报 widget 看板 + 最近日报流 ---- */
+  .rw-board-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); padding: 2px 2px 0; }
+  .rw-board-row .rb-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rw-board-row .rb-sep { color: var(--text-3); }
+  .rw-recent { flex: 1; min-height: 0; overflow-y: auto; border-top: 1px solid var(--divider); padding-top: 4px; }
+  .rw-recent .rr {
+    display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-2);
+    padding: 3px 4px; cursor: pointer; border-radius: 6px;
+    transition: background-color 150ms var(--ease-hover), color 150ms var(--ease-hover);
+  }
+  .rw-recent .rr:hover { background: var(--subtle-hover); color: var(--accent); }
+  .rw-recent .rr .d { flex: none; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .rw-recent .rr:hover .d { color: inherit; }
+  .rw-recent .rr .s { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rw-recent .rr .arr { flex: none; color: var(--text-3); }
+  .rw-recent .rr-empty { font-size: 11px; color: var(--text-3); text-align: center; padding: 8px 0; }
+  /* 截屏素材库（向导步骤②） */
+  .rw-assets { margin-bottom: 8px; }
+  .rw-assets .ra-count { font-size: 11px; color: var(--text-3); margin-bottom: 4px; }
+  .rw-assets .ra-empty { font-size: 11.5px; color: var(--text-3); background: var(--subtle-hover); border-radius: var(--radius-sm); padding: 7px 10px; }
+  .rw-assets .ra-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .rw-assets .ra-cell { position: relative; flex: none; width: 88px; height: 56px; border: 1px solid var(--card-border); border-radius: 6px; overflow: hidden; }
+  .rw-assets .ra-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .rw-assets .ra-cell .ra-err { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; font-size: 10px; color: var(--danger); }
+  .rw-assets .ra-cell.bad img { display: none; }
+  .rw-assets .ra-cell.bad .ra-err { display: flex; }
+  .rw-assets .ra-del {
+    position: absolute; top: 1px; right: 1px; width: 15px; height: 15px; line-height: 13px;
+    padding: 0; font-size: 11px; border-radius: 4px; border: none;
+    background: rgba(0, 0, 0, 0.55); color: #fff; cursor: pointer; display: none;
+  }
+  .rw-assets .ra-cell:hover .ra-del { display: block; }
+  .rw-assets .ra-cell img { cursor: zoom-in; }
+  /* 图片预览层（缩略图点击放大）：z-index 高于模态、低于 toast */
+  #img-viewer {
+    position: fixed; inset: 0; z-index: 105; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+    cursor: zoom-out; animation: overlay-in 150ms var(--ease-hover) both;
+  }
+  #img-viewer.show { display: flex; }
+  #img-viewer img {
+    max-width: 92%; max-height: 88%; border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .cv-ci { display: flex; align-items: baseline; gap: 8px; padding: 4px 10px; font-size: 12px; color: var(--text-2); }
+  .cv-ci .t { color: var(--text-3); font-size: 11px; flex: none; font-variant-numeric: tabular-nums; }
+  .cv-ci .h { color: var(--text-3); font-size: 11px; flex: none; }
+  .cv-ci .s { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rs-usage { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
+  /* 日历"有日报"角标：日期格子底部居中小蓝点（右上数字徽标仍是待办，两者可并存） */
+  .cal-cell .rep-dot { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .cal-detail .cd-rep { display: flex; align-items: center; gap: 8px; padding: 6px 2px; font-size: 12px; color: var(--text-2); border-top: 1px dashed var(--divider); margin-top: 6px; }
+
+  /* ========== 模态（Acrylic：遮罩+弹窗双层 backdrop-filter；必须直挂 body，防 backdrop root 截断） ========== */
+  #modal-mask {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0, 0, 0, 0.30);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    backdrop-filter: blur(20px) saturate(1.2);
+    display: none; align-items: center; justify-content: center;
+  }
+  #modal-mask.show { display: flex; animation: overlay-in 150ms var(--ease-hover) both; }
+  #modal-mask.closing { animation: overlay-out 150ms var(--ease-in) both; pointer-events: none; }
+  #modal {
+    background: var(--modal-bg);
+    -webkit-backdrop-filter: blur(40px) saturate(1.35);
+    backdrop-filter: blur(40px) saturate(1.35);
+    border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+    padding: 20px 22px 16px; width: 420px; max-width: calc(100vw - 48px);
+    box-shadow: 0 2px 21px rgba(0, 0, 0, 0.15), 0 32px 64px rgba(0, 0, 0, 0.19);  /* Dialog 官方双层 */
+    animation: dialog-in 300ms var(--ease-out) both;
+  }
+  #modal-mask.closing #modal { animation: dialog-out 150ms var(--ease-in) both; }
+  @keyframes overlay-in { from { opacity: 0; } }
+  @keyframes overlay-out { to { opacity: 0; } }
+  @keyframes dialog-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } }
+  @keyframes dialog-out { to { opacity: 0; transform: translateY(6px) scale(0.98); } }
+  #modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  #modal input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    font-size: 13px; outline: none; font-family: inherit; color: var(--text-1); background: var(--card-bg);
+    transition: border-color 150ms var(--ease-hover), box-shadow 150ms var(--ease-hover);
+  }
+  #modal input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  #modal .err { color: var(--danger); font-size: 12px; height: 16px; margin: 6px 0 4px; }
+  #modal .btns { display: flex; justify-content: flex-end; gap: 8px; }
+  #modal button {
+    padding: 6px 16px; border-radius: var(--radius-sm); border: 1px solid var(--card-border);
+    background: transparent; color: var(--text-1); font-size: 13px; font-family: inherit; cursor: pointer;
+    transition: background-color 150ms var(--ease-hover), border-color 150ms var(--ease-hover);
+  }
+  #modal button:hover { background: var(--subtle-hover); }
+  #modal button:active { transform: scale(0.97); }
+  #modal button.primary { background: var(--accent); border-color: transparent; color: var(--on-accent); font-weight: 600; }
+  #modal button.primary:hover { filter: brightness(1.08); }
+  #modal p.body { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-bottom: 6px; }
+
+  /* ========== 右键菜单（Acrylic 风） ========== */
+  #ctx-menu {
+    position: fixed; z-index: 60; display: none; min-width: 130px;
+    background: var(--menu-bg);
+    -webkit-backdrop-filter: blur(30px) saturate(1.3);
+    backdrop-filter: blur(30px) saturate(1.3);
+    border: 1px solid var(--card-border); border-radius: var(--radius-md);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14); padding: 4px; font-size: 13px;
+  }
+  #ctx-menu div { padding: 7px 14px; border-radius: var(--radius-sm); cursor: pointer; }
+  #ctx-menu div:hover { background: var(--accent-subtle); color: var(--accent); }
+  #ctx-menu div.danger:hover { background: var(--danger-subtle); color: var(--danger); }
+
+  /* ========== toast ========== */
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(32, 32, 34, 0.92); color: #fff;
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    padding: 8px 18px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    font-size: 13px; opacity: 0; transition: opacity 250ms var(--ease-hover);
+    pointer-events: none; z-index: 110;   /* 必须压过模态遮罩(z-100)+其背景模糊，否则模态期 toast 看不清（用户实报） */
+  }
+  #toast.show { opacity: 0.96; }
+
+  /* ========== 滚动条（3px 细条 + 透明轨道） ========== */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+  ::-webkit-scrollbar-thumb:active { background: var(--scrollbar-hover); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+</style>
+</head>
+<body>
+
+<!-- 背景图层（图片 + 主题遮罩；bg_enabled=false 或目录无图时前端摘除） -->
+<div id="bg-layer"></div>
+<div id="bg-mask"></div>
+
+<header>
+  <div class="logo-mark">YY</div>
+  <div class="logo-text">YY工具箱</div>
+  <div class="logo-hint">Alt+Space 唤起 / 隐藏 · 点卡片启动 · 拖卡片分组</div>
+  <div class="spacer"></div>
+  <button class="ghost" id="btn-bg" title="显示 / 隐藏背景图">背景</button>
+  <button class="ghost" id="btn-refresh">刷新</button>
+  <button class="ghost danger" id="btn-quit">退出</button>
+</header>
+
+<!-- ★ 今日工作概览条：极薄一行扫一眼今日工作量；数字即入口（提交→向导 / 专注→番茄钟 / 日报→今日日报 / AI→设置） -->
+<div id="today-bar">
+  <button class="tb-item" id="tb-commit" title="今日 git 提交 · 点击按项目查看提交明细">提交 –</button><span class="tb-sep">·</span>
+  <button class="tb-item" id="tb-todo" title="今日待办 闭环/新建 · 点击看历史待办">闭环 –</button><span class="tb-sep">·</span>
+  <button class="tb-item" id="tb-pomo" title="今日番茄钟专注分钟 · 点击切换到番茄钟">专注 –</button><span class="tb-sep">·</span>
+  <button class="tb-item" id="tb-report" title="点击查看 / 编辑今日日报">日报 –</button><span class="tb-sep">·</span>
+  <button class="tb-item" id="tb-ai" title="今日 AI token 用量 · 点击打开日报设置">AI –</button>
+</div>
+
+<nav id="tabs"></nav>
+<main><div id="grid"></div></main>
+
+<!-- 底部左右分割：左侧待办 / 右侧小工具区（可切换扩展） -->
+<div id="bottom">
+  <section id="todo-panel">
+    <div id="todo-head">
+      <span class="tico"><svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 8.2 7.2 10.4 11 5.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="title">待办</span><span class="cnt" id="todo-cnt"></span>
+      <span style="flex:1"></span>
+      <button id="btn-cal" class="mini-btn">日历</button>
+      <button id="btn-history" class="mini-btn">历史</button>
+    </div>
+    <div id="todo-list"></div>
+    <div id="todo-input-row">
+      <input id="todo-input" placeholder="记一笔，回车添加…" maxlength="200">
+    </div>
+  </section>
+
+  <!-- 右侧小工具区：顶部胶囊 tab 可切换（番茄钟为首个，后续可扩展） -->
+  <section id="widget-panel">
+    <div id="widget-tabs"></div>
+    <div id="widget-body">
+      <!-- 番茄钟 -->
+      <div class="widget" id="w-pomo">
+        <div class="pomo-ring">
+          <svg viewBox="0 0 120 120" width="132" height="132">
+            <circle class="ring-bg" cx="60" cy="60" r="52" fill="none" stroke-width="8"/>
+            <circle class="ring-fg" id="pomo-ring" cx="60" cy="60" r="52" fill="none" stroke-width="8"
+                    stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="pomo-center">
+            <div class="pomo-time" id="pomo-time">25:00</div>
+            <div class="pomo-state" id="pomo-state">准备专注</div>
+          </div>
+        </div>
+        <div class="pomo-btns">
+          <button id="pomo-mode" class="pomo-chip" title="点击切换 专注↔休息">🍅 专注 25′</button>
+          <span style="flex:1"></span>
+          <button id="pomo-cfg" class="mini-btn" title="配置时长">⚙</button>
+          <button id="pomo-reset" class="mini-btn">重置</button>
+          <button id="pomo-toggle" class="pomo-go">开始</button>
+        </div>
+      </div>
+
+      <!-- 记事本：简单富文本（加粗/斜体/删除线/字号/清除格式），内容自动持久化 -->
+      <div class="widget" id="w-notes">
+        <div class="notes-toolbar">
+          <button class="nt-btn" data-cmd="bold" title="加粗"><b>B</b></button>
+          <button class="nt-btn" data-cmd="italic" title="斜体"><i>I</i></button>
+          <button class="nt-btn" data-cmd="strikeThrough" title="删除线"><s>S</s></button>
+          <button class="nt-btn" data-cmd="insertUnorderedList" title="列表">≡</button>
+          <span class="nt-sep"></span>
+          <button class="nt-btn nt-size" data-size="2" title="小字号">小</button>
+          <button class="nt-btn nt-size" data-size="3" title="标准字号">标</button>
+          <button class="nt-btn nt-size" data-size="5" title="大字号">大</button>
+          <span class="nt-sep"></span>
+          <button class="nt-btn" data-cmd="removeFormat" title="清除格式">⌫</button>
+        </div>
+        <div id="notes-editor" contenteditable="true" data-ph="随手记点什么…自动保存" spellcheck="false"></div>
+        <div id="notes-pager">
+          <button id="np-prev" class="nt-btn" title="上一页">◀</button>
+          <span id="np-ind">1 / 1</span>
+          <button id="np-next" class="nt-btn" title="下一页">▶</button>
+          <button id="np-add" class="nt-btn" title="新建一页">＋</button>
+          <button id="np-del" class="nt-btn" title="删除当前页">✕</button>
+        </div>
+      </div>
+      <!-- ★ 日报：今日看板（git/专注/日报状态）+ 生成入口 + 最近日报流（点任意一天直达查看/编辑） -->
+      <div class="widget" id="w-report">
+        <div class="rw-board-row">
+          <span id="rw-b-git" class="rb-num" style="cursor:pointer" title="点击按项目查看今日提交明细">提交 –</span><span class="rb-sep">·</span>
+          <span id="rw-b-pomo" class="rb-num">专注 –</span><span class="rb-sep">·</span>
+          <span id="rw-b-state" class="rb-num">日报 –</span>
+        </div>
+        <div class="pomo-btns" style="margin:8px 0">
+          <button id="rw-open" class="pomo-go">生成日报</button>
+          <span style="flex:1"></span>
+          <button id="rw-edit" class="mini-btn" title="查看或编辑今日已归档日报">查看今日</button>
+        </div>
+        <div id="rw-recent" class="rw-recent"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 模态：建组 / 重命名 / 删除确认 / 历史待办（原生对话框会触发 blur 误隐藏，故自绘） -->
+<div id="modal-mask"><div id="modal"></div></div>
+<!-- 图片预览层（素材库缩略图点击放大；独立于 #modal 免顶掉向导） -->
+<div id="img-viewer"><img alt=""></div>
+<!-- 分组右键菜单 -->
+<div id="ctx-menu"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+const UNG = '__ungrouped__';          // 未分组虚拟组标识
+let TOOLS = [];                       // [{dir,name,type,desc,port}]
+let CFG  = { groups: [], ungrouped: [] };
+let active = UNG;                     // 当前展示的组
+let api = null;                       // pywebview.api 桥
+let BGS = [];                         // web/bg/ 背景图文件名列表（Python 端扫描）
+
+const $ = s => document.querySelector(s);
+const toolOf = dir => TOOLS.find(t => t.dir === dir);
+const typeBadge = t => ({web:'Web', desk:'桌面', bat:'脚本', app:'应用', dir:'目录'}[t] || '工具');
+/* Lucide 风格 SVG 线条图标（白线稿，配渐变图标容器；emoji 在 Win 下渲染扁平，弃用） */
+const _svg = d => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const typeIcon = t => ({
+  web:  _svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14.5 14.5 0 0 1 0 18a14.5 14.5 0 0 1 0-18"/>'),
+  desk: _svg('<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'),
+  bat:  _svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/>'),
+  app:  _svg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 13.5v7M14 17h7"/>'),
+  dir:  _svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
+}[t] || _svg('<circle cx="12" cy="12" r="9"/>'));
+/* 本地 24 小时制 "MM-DD HH:mm"（注意：ISO 串是 UTC，直接切片会慢 8 小时，必须本地化解析） */
+const pad2 = n => String(n).padStart(2, '0');
+const fmtTime = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+/* ========== 数据加载 ========== */
+
+async function loadData() {
+  const data = await api.get_all();
+  TOOLS = data.tools || [];
+  CFG = data.config || { groups: [], ungrouped: [] };
+  CFG.todos = Array.isArray(CFG.todos) ? CFG.todos : [];
+  CFG.todo_history = Array.isArray(CFG.todo_history) ? CFG.todo_history : [];
+  CFG.bg_enabled = CFG.bg_enabled !== false;         // 未配置默认开
+  BGS = data.bgs || [];
+  applyBg();
+  // 记事本同步：首次（进程内）用服务端数据初始化编辑器；此后编辑器是事实源
+  // （防竞态：唤起时防抖未落盘的最后输入不能被服务端旧值覆盖），只回写不反向覆盖
+  notesNormalize();
+  const ed = $('#notes-editor');
+  if (ed) {
+    if (!notesBound) { ed.innerHTML = CFG.notes_pages[CFG.notes_page] ?? ''; notesBound = true; }
+    else CFG.notes_pages[CFG.notes_page] = ed.innerHTML;
+  }
+  renderNotesPager();
+  // 恢复上次打开的分组；该组已被删则回退未分组
+  if (CFG.active_group) active = CFG.active_group;
+  if (active !== UNG && !CFG.groups.some(g => g.name === active)) active = UNG;
+  // 恢复上次使用的右下角小工具（番茄钟/记事本…；已下线的工具回退番茄钟）
+  if (CFG.active_widget && WIDGETS.some(w => w.id === CFG.active_widget)) widgetActive = CFG.active_widget;
+  // 恢复番茄钟自定义时长（仅首次：后续唤起不再重置，否则暂停中的剩余时间会被清回满时长）
+  if (!pomoCfgLoaded) {
+    pomoCfgLoaded = true;
+    if (CFG.pomo_focus >= 1) POMO.focus = CFG.pomo_focus;
+    if (CFG.pomo_rest >= 1) POMO.rest = CFG.pomo_rest;
+    POMO.total = pomoLen(); POMO.remain = POMO.total;
+    pomoRender();
+  }
+  renderWidgetTabs();
+  renderTabs(); renderGrid(); renderTodos();
+  refreshReportState();   // 日报 widget 状态行（异步不阻塞主渲染）
+}
+
+/** 应用背景：bg_enabled 且 web/bg/ 有图 → 随机取一张铺底 + 主题遮罩；否则回落纯 Mica */
+function applyBg() {
+  const on = CFG.bg_enabled && BGS.length > 0;
+  document.body.classList.toggle('bg-off', !on);
+  const btn = $('#btn-bg');
+  btn.classList.toggle('on', on);
+  btn.title = on ? '隐藏背景图' : '显示背景图（把图片放进 web/bg/ 即可换图）';
+  if (on) {
+    const pick = BGS[Math.floor(Math.random() * BGS.length)];   // 多张时每次唤起随机换
+    $('#bg-layer').style.backgroundImage = `url("bg/${encodeURIComponent(pick)}")`;
+  }
+}
+window.__refresh = () => loadData().catch(() => {});   // 供热键唤起时由 Python 调用
+
+/* ========== 渲染 ========== */
+
+function renderTabs() {
+  const nav = $('#tabs'); nav.innerHTML = '';
+  const all = [...CFG.groups.map(g => ({key: g.name, label: g.name, tools: g.tools})),
+               {key: UNG, label: '未分组', tools: CFG.ungrouped}];
+  all.forEach(g => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (active === g.key ? ' active' : '');
+    el.dataset.group = g.key;
+    el.draggable = g.key !== UNG;                     // 未分组标签不可拖动排序
+    el.innerHTML = `${g.label}<span class="cnt">${g.tools.length}</span>`;
+    el.title = g.key === UNG ? '未分组：新发现的工具落在这里' : '拖卡片到此分组 · 右键重命名/删除 · 拖动排序';
+    nav.appendChild(el);
+  });
+  const add = document.createElement('div');
+  add.className = 'tab add'; add.textContent = '＋ 建组';
+  add.title = '新建分组';
+  nav.appendChild(add);
+  const addApp = document.createElement('div');
+  addApp.className = 'tab add'; addApp.id = 'tab-add-app'; addApp.textContent = '＋ 应用';
+  addApp.title = '添加本地应用（exe 提取原始图标 / html 网页走默认浏览器）';
+  nav.appendChild(addApp);
+  const addDir = document.createElement('div');
+  addDir.className = 'tab add'; addDir.id = 'tab-add-dir'; addDir.textContent = '＋ 目录';
+  addDir.title = '添加文件夹（点击卡片用资源管理器打开）';
+  nav.appendChild(addDir);
+}
+
+function renderGrid() {
+  const grid = $('#grid'); grid.innerHTML = '';
+  const dirs = active === UNG ? CFG.ungrouped : (CFG.groups.find(g => g.name === active) || {tools: []}).tools;
+  if (!dirs.length) {
+    grid.classList.remove('scrollable');
+    grid.innerHTML = `<div class="empty"><span class="eicon">🧰</span>${active === UNG
+      ? '暂无工具：工具在 TOOLS.md 登记或放入 自研工具 目录后会自动出现在这里'
+      : '该分组为空：把卡片从其他分组拖过来，或直接点击上方组名切换'}</div>`;
+    return;
+  }
+  let i = 0;
+  dirs.forEach(dir => {
+    const t = toolOf(dir); if (!t) return;
+    const el = document.createElement('div');
+    el.className = 'card'; el.draggable = true; el.dataset.dir = dir;
+    el.style.setProperty('--i', Math.min(i++, 10));   // stagger 入场序号（封顶防长列表等太久）
+    el.innerHTML = `
+      <div class="cicon ${t.type}">${t.icon ? `<img src="${t.icon}" alt="">` : typeIcon(t.type)}</div>
+      <div class="cbody">
+        <div class="name"><span class="nm">${t.name}</span><span class="t ${t.type}">${typeBadge(t.type)}</span></div>
+        <div class="desc" title="${(t.desc || '').replace(/"/g, '&quot;')}">${t.desc || '（未登记用途，见 TOOLS.md）'}</div>
+      </div>`;
+    if (t.type === 'app') el.title = '右键可移除';
+    grid.appendChild(el);
+  });
+  // 内容溢出才挂两端渐隐遮罩（不溢出时避免误裁两端卡片）
+  requestAnimationFrame(() => {
+    grid.classList.toggle('scrollable', grid.scrollWidth > grid.clientWidth + 8);
+  });
+}
+
+/* ========== 持久化（300ms 防抖） ========== */
+
+let saveTimer = null;
+function persist() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const ok = await api.save_config(JSON.stringify(CFG));
+    if (!ok) toast('⚠️ 分组保存失败');
+  }, 300);
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ========== 添加本地应用（仅 exe；图标取 exe 原始图标） ========== */
+
+let suppressHide = false;   // 系统对话框/命名期间抑制失焦隐藏（对话框关闭瞬间焦点抖动会误藏面板）
+
+async function addApp() {
+  suppressHide = true;
+  try {
+    const res = await api.pick_exe();          // 系统文件对话框
+    if (!res) return;                          // 用户取消（静默）
+    if (res.err) return toast('⚠️ ' + res.err);
+    if (res.dup) return toast('⚠️ 该应用已在列表中');
+    const name = await showInput('添加本地应用', '显示名称', res.name);   // 预填 exe 名，可改
+    if (!name) return;
+    const r = await api.save_app(res.path, name);
+    if (r && r.ok) {
+      if (r.note) toast('ℹ️ ' + r.note);
+      loadData().catch(() => {});
+    } else toast('⚠️ ' + ((r && r.why) || '添加失败'));
+  } finally {
+    suppressHide = false;
+  }
+}
+
+/* 添加目录：系统目录选择对话框 → 命名 → 入库（save_app 目录分支） */
+async function addDir() {
+  suppressHide = true;
+  try {
+    const res = await api.pick_dir();
+    if (!res) return;
+    if (res.err) return toast('⚠️ ' + res.err);
+    if (res.dup) return toast('⚠️ 该目录已在列表中');
+    const name = await showInput('添加文件夹', '显示名称', res.name);
+    if (!name) return;
+    const r = await api.save_app(res.path, name);
+    if (r && r.ok) loadData().catch(() => {});
+    else toast('⚠️ ' + ((r && r.why) || '添加失败'));
+  } finally {
+    suppressHide = false;
+  }
+}
+
+/* ========== 分组操作 ========== */
+
+function groupNames() { return CFG.groups.map(g => g.name); }
+
+function addGroup() {
+  showInput('新建分组', '分组名称', '').then(name => {
+    if (!name) return;
+    if (groupNames().includes(name) || name === '未分组') return toast('⚠️ 已存在同名分组');
+    CFG.groups.push({ name, tools: [] });
+    active = name; CFG.active_group = active;
+    renderTabs(); renderGrid(); persist();
+  });
+}
+function renameGroup(oldName) {
+  showInput('重命名分组', '新名称', oldName).then(name => {
+    if (!name || name === oldName) return;
+    if (groupNames().includes(name) || name === '未分组') return toast('⚠️ 已存在同名分组');
+    CFG.groups.find(g => g.name === oldName).name = name;
+    if (active === oldName) active = name;
+    CFG.active_group = active;
+    renderTabs(); renderGrid(); persist();
+  });
+}
+function deleteGroup(name) {
+  const g = CFG.groups.find(x => x.name === name); if (!g) return;
+  showConfirm(`删除分组「${name}」`, `组内 ${g.tools.length} 个工具将移入「未分组」，工具本身不受影响。`).then(yes => {
+    if (!yes) return;
+    CFG.ungrouped.push(...g.tools);
+    CFG.groups = CFG.groups.filter(x => x.name !== name);
+    if (active === name) active = UNG;
+    CFG.active_group = active;
+    renderTabs(); renderGrid(); persist();
+  });
+}
+/** 把工具移动到目标组（null=未分组）的指定下标（缺省组尾） */
+function moveTool(dir, toGroup, index) {
+  CFG.groups.forEach(g => g.tools = g.tools.filter(d => d !== dir));
+  CFG.ungrouped = CFG.ungrouped.filter(d => d !== dir);
+  const list = toGroup === null ? CFG.ungrouped : CFG.groups.find(g => g.name === toGroup).tools;
+  list.splice(index === undefined ? list.length : index, 0, dir);
+  renderTabs(); renderGrid(); persist();
+}
+/** 组标签拖动排序 */
+function reorderGroup(fromName, toName, before) {
+  const from = CFG.groups.findIndex(g => g.name === fromName);
+  if (from < 0) return;
+  const [g] = CFG.groups.splice(from, 1);
+  let to = CFG.groups.findIndex(x => x.name === toName);
+  if (to < 0) return CFG.groups.push(g);
+  if (!before) to += 1;
+  CFG.groups.splice(to, 0, g);
+  renderTabs(); persist();
+}
+
+/* ========== 事件绑定（事件委托） ========== */
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (tab) {
+    if (tab.classList.contains('add'))
+      return tab.id === 'tab-add-app' ? addApp() : tab.id === 'tab-add-dir' ? addDir() : addGroup();
+    active = tab.dataset.group;
+    CFG.active_group = active;          // 记住上次分组（需求：下次默认展示）
+    persist();
+    renderTabs(); renderGrid();
+  }
+  const card = e.target.closest('.card');
+  if (card) {
+    api.launch(card.dataset.dir).then(ok => { if (ok) api.hide_panel(); else toast('⚠️ 未找到启动入口'); });
+  }
+});
+
+/* ---- 右键菜单 ---- */
+let ctxTarget = null;
+document.addEventListener('contextmenu', e => {
+  const tab = e.target.closest('.tab');
+  const menu = $('#ctx-menu');
+  const card = e.target.closest('.card');
+  if (tab && tab.dataset.group && tab.dataset.group !== UNG) {
+    e.preventDefault();
+    ctxTarget = tab.dataset.group;
+    menu.innerHTML = `<div data-act="rename">重命名</div><div class="danger" data-act="del">删除分组</div>`;
+    menu.style.display = 'block';
+    menu.style.left = Math.min(e.clientX, innerWidth - 140) + 'px';
+    menu.style.top  = Math.min(e.clientY, innerHeight - 90) + 'px';
+  } else if (card) {
+    const t = toolOf(card.dataset.dir);
+    if (t && (t.type === 'app' || t.type === 'dir')) {   // 自定义应用/目录卡支持移除（根目录工具删文件夹即可）
+      e.preventDefault();
+      ctxTarget = card.dataset.dir;
+      menu.innerHTML = `<div class="danger" data-act="remove-app">移除应用</div>`;
+      menu.style.display = 'block';
+      menu.style.left = Math.min(e.clientX, innerWidth - 140) + 'px';
+      menu.style.top  = Math.min(e.clientY, innerHeight - 60) + 'px';
+    } else {
+      menu.style.display = 'none';
+    }
+  } else {
+    menu.style.display = 'none';
+  }
+});
+document.addEventListener('click', e => {
+  const item = e.target.closest('#ctx-menu div');
+  $('#ctx-menu').style.display = 'none';
+  if (!item || !ctxTarget) return;
+  if (item.dataset.act === 'rename') renameGroup(ctxTarget);
+  if (item.dataset.act === 'del')    deleteGroup(ctxTarget);
+  if (item.dataset.act === 'remove-app') {
+    const dir = ctxTarget;
+    showConfirm('移除本地应用', '只从工具箱移除入口，不删除 exe 文件本身。').then(async yes => {
+      if (!yes) return;
+      if (await api.remove_app(dir)) loadData().catch(() => {});
+      else toast('⚠️ 移除失败');
+    });
+  }
+  ctxTarget = null;
+});
+
+/* ---- 拖拽：卡片 ---- */
+document.addEventListener('dragstart', e => {
+  const card = e.target.closest('.card');
+  if (card) {
+    e.dataTransfer.setData('application/x-tool', card.dataset.dir);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+    return;
+  }
+  const tab = e.target.closest('.tab');
+  if (tab && tab.dataset.group && tab.dataset.group !== UNG) {
+    e.dataTransfer.setData('application/x-group', tab.dataset.group);
+    e.dataTransfer.effectAllowed = 'move';
+    tab.classList.add('dragging');
+  }
+});
+document.addEventListener('dragend', () => {
+  document.querySelectorAll('.dragging,.drag-over,.insert-before,.insert-after')
+    .forEach(el => el.classList.remove('dragging', 'drag-over', 'insert-before', 'insert-after'));
+});
+
+document.addEventListener('dragover', e => {
+  const types = [...(e.dataTransfer?.types || [])];
+  // 1) 卡片 → 分组标签：跨组移动
+  const tab = e.target.closest('.tab');
+  if (types.includes('application/x-tool') && tab && tab.dataset.group) {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.tab.drag-over').forEach(el => el.classList.remove('drag-over'));
+    tab.classList.add('drag-over');
+    return;
+  }
+  // 2) 组标签 → 组标签：分组排序
+  if (types.includes('application/x-group') && tab && tab.dataset.group && tab.dataset.group !== UNG) {
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    tab.classList.add('drag-over');
+    return;
+  }
+  // 3) 卡片 → 网格：组内排序插入指示
+  if (types.includes('application/x-tool')) {
+    const card = e.target.closest('.card');
+    if (card) {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.insert-before,.insert-after')
+        .forEach(el => el.classList.remove('insert-before', 'insert-after'));
+      const r = card.getBoundingClientRect();
+      card.classList.add(e.clientX < r.left + r.width / 2 ? 'insert-before' : 'insert-after');
+    } else if (e.target.closest('#grid')) {
+      e.preventDefault();  // 拖到网格空白区也允许
+    }
+  }
+});
+document.addEventListener('dragleave', e => {
+  if (e.target.classList?.contains('tab')) e.target.classList.remove('drag-over');
+});
+
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const dir = e.dataTransfer.getData('application/x-tool');
+  const gname = e.dataTransfer.getData('application/x-group');
+  const tab = e.target.closest('.tab');
+  if (dir && tab && tab.dataset.group) {
+    return moveTool(dir, tab.dataset.group === UNG ? null : tab.dataset.group);
+  }
+  if (gname && tab && tab.dataset.group && tab.dataset.group !== UNG && tab.dataset.group !== gname) {
+    const r = tab.getBoundingClientRect();
+    return reorderGroup(gname, tab.dataset.group, e.clientX < r.left + r.width / 2);
+  }
+  if (dir) {  // 网格内排序（两行列向流动：视觉右插 = DOM 目标索引 +2，跳过下方卡）
+    const card = e.target.closest('.card');
+    const cur = active === UNG ? CFG.ungrouped : CFG.groups.find(g => g.name === active).tools;
+    if (!cur.includes(dir)) { moveTool(dir, active === UNG ? null : active); return; }  // 从别组拖进当前组
+    if (!card) return;                                    // 空白区松手 = 组尾
+    const target = card.dataset.dir;
+    if (dir === target) return;
+    const r = card.getBoundingClientRect();
+    const right = e.clientX >= r.left + r.width / 2;
+    cur.splice(cur.indexOf(dir), 1);
+    const ti = cur.indexOf(target);
+    cur.splice(right ? ti + 2 : ti, 0, dir);
+    renderGrid(); renderTabs(); persist();
+  }
+});
+
+/* ---- 顶栏按钮 / 失焦隐藏 ---- */
+$('#btn-refresh').addEventListener('click', () => loadData().catch(() => toast('刷新失败')));
+$('#btn-quit').addEventListener('click', () => api.quit_app());
+window.addEventListener('blur', () => { if (!suppressHide && api) api.hide_panel(true); });
+$('#btn-bg').addEventListener('click', () => {
+  CFG.bg_enabled = !CFG.bg_enabled;
+  applyBg(); persist();
+});
+
+/* ========== 待办面板（轻量：记录 + 闭环即删；历史保留最近 20 条可恢复） ========== */
+
+const HISTORY_MAX = 20;
+
+function renderTodos(freshId) {
+  const list = $('#todo-list');
+  const todos = CFG.todos;
+  $('#todo-cnt').textContent = todos.length ? `${todos.length} 项` : '';
+  list.innerHTML = '';
+  if (!todos.length) {
+    list.innerHTML = '<div class="todo-empty">暂无待办：在下方输入框记一笔，回车添加</div>';
+    return;
+  }
+  todos.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'todo' + (t.id === freshId ? ' fresh' : ''); el.dataset.id = t.id;
+    el.innerHTML = `
+      <span class="box" title="闭环（移入历史）"><svg viewBox="0 0 16 16" width="11" height="11"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="txt"></span><span class="time">${fmtTime(t.created_at)}</span>`;
+    el.querySelector('.txt').textContent = t.text;   // textContent 防注入
+    el.querySelector('.txt').title = t.text;
+    list.appendChild(el);
+  });
+}
+
+function addTodo(text) {
+  text = text.trim();
+  if (!text) return;
+  const t = { id: 't' + Date.now() + Math.floor(Math.random() * 1e4), text, created_at: new Date().toISOString() };
+  CFG.todos.push(t);
+  renderTodos(t.id); persist();      // 传 id：新条目播滑入动画
+  $('#todo-list').scrollTop = 1e9;   // 滚到最新
+}
+
+function closeTodo(id) {
+  const t = CFG.todos.find(x => x.id === id);
+  if (!t) return;
+  const el = document.querySelector(`.todo[data-id="${id}"]`);
+  if (el && !el.classList.contains('removing')) {
+    el.classList.add('removing');                      // 先播 180ms 淡出再删（视觉闭环反馈）
+    setTimeout(() => doCloseTodo(id), 180);
+  } else if (!el) {
+    doCloseTodo(id);
+  }
+}
+function doCloseTodo(id) {
+  const t = CFG.todos.find(x => x.id === id);
+  if (!t) return;
+  CFG.todos = CFG.todos.filter(x => x.id !== id);
+  CFG.todo_history.unshift({ ...t, closed_at: new Date().toISOString() });
+  CFG.todo_history = CFG.todo_history.slice(0, HISTORY_MAX);   // 只留最近 20 条
+  renderTodos(); persist();
+}
+
+function restoreTodo(id) {
+  const t = CFG.todo_history.find(x => x.id === id);
+  if (!t) return;
+  CFG.todo_history = CFG.todo_history.filter(x => x.id !== id);
+  delete t.closed_at;
+  CFG.todos.push(t);
+  renderTodos(); showHistory(); persist();
+}
+
+/* ---- 历史待办模态 ---- */
+function showHistory() {
+  const m = $('#modal');
+  const items = (CFG.todo_history || []).map(t => `
+    <div class="hist-item">
+      <span class="txt"></span><span class="time">${fmtTime(t.closed_at)}</span>
+      <button class="restore" data-id="${t.id}">恢复</button>
+    </div>`).join('');
+  m.innerHTML = `<h3>历史待办（最近 ${HISTORY_MAX} 条闭环）</h3>
+    <div id="hist-list">${items || '<div class="todo-empty" style="padding:16px 6px">暂无闭环记录</div>'}</div>
+    <div class="btns" style="margin-top:12px"><button class="primary" id="m-ok">关闭</button></div>`;
+  // 文本用 textContent 填充防注入
+  m.querySelectorAll('.hist-item').forEach((el, i) => {
+    el.querySelector('.txt').textContent = CFG.todo_history[i].text;
+  });
+  $('#modal-mask').classList.add('show');
+  $('#m-ok').addEventListener('click', closeModal);
+  m.querySelectorAll('.restore').forEach(b => b.addEventListener('click', () => restoreTodo(b.dataset.id)));
+}
+
+document.addEventListener('click', e => {
+  const todo = e.target.closest('.todo');
+  if (todo && (e.target.closest('.box'))) return closeTodo(todo.dataset.id);
+  if (e.target.id === 'btn-history') return showHistory();
+  if (e.target.id === 'btn-cal') return showCalendar();
+});
+
+/* ---- 待办日历（视图不落盘）：按「创建日 / 闭环日」聚合，点日期看当天明细 ---- */
+const dayKey = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const hhmm = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
+function todoDayMap() {
+  const map = {};
+  const put = (k, arr, t) => { (map[k] = map[k] || { open: [], closed: [] })[arr].push(t); };
+  (CFG.todos || []).forEach(t => { if (t.created_at) put(dayKey(new Date(t.created_at)), 'open', t); });
+  (CFG.todo_history || []).forEach(t => { if (t.closed_at) put(dayKey(new Date(t.closed_at)), 'closed', t); });
+  return map;
+}
+
+let calY = 2026, calM = 0, calSel = null;
+
+async function showCalendar() {
+  try { REP.dates = new Set(await api.report_dates()); } catch (e) { /* 桥未就绪等，静默 */ }
+  const now = new Date();
+  calY = now.getFullYear(); calM = now.getMonth(); calSel = null;
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const m = $('#modal'), map = todoDayMap();
+  const lead = (new Date(calY, calM, 1).getDay() + 6) % 7;      // 周一开头
+  const dim = new Date(calY, calM + 1, 0).getDate();
+  const todayK = dayKey(new Date());
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<span class="cal-cell blank"></span>';
+  for (let d = 1; d <= dim; d++) {
+    const k = `${calY}-${pad2(calM + 1)}-${pad2(d)}`;
+    const e = map[k];
+    const n = e ? e.open.length + e.closed.length : 0;
+    let badge = '';
+    if (n) {
+      const done = e.closed.length;
+      const cls = done === 0 ? 'r' : done === n ? 'g' : 'y';   // 全未闭环红/部分黄/全闭环绿
+      badge = `<i class="${cls}">${done}/${n}</i>`;
+    }
+    cells += `<button class="cal-cell${k === todayK ? ' today' : ''}${n ? ' has' : ''}${calSel === k ? ' sel' : ''}" data-k="${k}">${d}${badge}${REP.dates.has(k) ? '<span class="rep-dot" title="有日报"></span>' : ''}</button>`;
+  }
+  m.innerHTML = `
+    <div class="cal-head">
+      <button class="mini-btn" id="cal-prev">‹</button>
+      <span class="cal-title">${calY} 年 ${calM + 1} 月</span>
+      <button class="mini-btn" id="cal-next">›</button>
+    </div>
+    <div class="cal-week">${['一', '二', '三', '四', '五', '六', '日'].map(x => `<span>${x}</span>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+    <div id="cal-detail" class="cal-detail"></div>
+    <div class="btns" style="margin-top:10px"><button class="primary" id="m-ok">关闭</button></div>`;
+  $('#modal-mask').classList.add('show');
+  $('#m-ok').addEventListener('click', closeModal);
+  $('#cal-prev').addEventListener('click', () => { calM--; if (calM < 0) { calM = 11; calY--; } calSel = null; renderCalendar(); });
+  $('#cal-next').addEventListener('click', () => { calM++; if (calM > 11) { calM = 0; calY++; } calSel = null; renderCalendar(); });
+  m.querySelectorAll('.cal-cell[data-k]').forEach(c =>
+    c.addEventListener('click', () => renderCalDetail(c.dataset.k, map)));
+  renderCalDetail(calSel, map);
+}
+
+function renderCalDetail(k, map) {
+  calSel = k;
+  document.querySelectorAll('.cal-cell[data-k]').forEach(c => c.classList.toggle('sel', c.dataset.k === k));
+  const box = $('#cal-detail'); if (!box) return;
+  if (!k) { box.innerHTML = '<div class="cd-empty">点选日期查看当天待办</div>'; return; }
+  const e = map[k] || { open: [], closed: [] };
+  const d = new Date(k + 'T00:00:00');
+  const rows = [
+    ...e.open.map(t => `<div class="cd-item"><span class="st">●</span><span class="tx"></span><span class="tm">${hhmm(new Date(t.created_at))} 记</span></div>`),
+    ...e.closed.map(t => `<div class="cd-item done"><span class="st">✓</span><span class="tx"></span><span class="tm">${hhmm(new Date(t.closed_at))} 闭环</span></div>`),
+  ];
+  const hasRep = REP.dates.has(k);
+  const repRow = `<div class="cd-rep"><span>📝 ${hasRep ? '已有日报' : '无日报'}</span><span style="flex:1"></span>
+      <button class="mini-btn" id="cd-rep-open">${hasRep ? '查看 / 编辑' : '生成该日日报'}</button></div>`;
+  box.innerHTML = `<div class="cd-title">${d.getMonth() + 1} 月 ${d.getDate()} 日 · ${rows.length ? `${e.open.length} 进行 / ${e.closed.length} 闭环` : '无待办记录'}</div>${rows.join('')}${repRow}`;
+  const items = box.querySelectorAll('.cd-item');
+  const all = [...e.open, ...e.closed];
+  items.forEach((el, i) => { el.querySelector('.tx').textContent = all[i].text; });   // textContent 防注入
+  $('#cd-rep-open').addEventListener('click', () => {
+    closeModal();
+    setTimeout(() => openReport(k), 170);   // 等 150ms 出场动画结束再开向导（共用 #modal）
+  });
+}
+$('#todo-input').addEventListener('keydown', ev => {
+  if (ev.key === 'Enter') { addTodo(ev.target.value); ev.target.value = ''; }
+});
+
+/* ========== 工作日报（分步向导）：① git 提交 ② 微信摘录 ③ AI 摘要 ④ AI 草稿→编辑归档。
+   归档 data/reports/YYYY-MM-DD.md（后端），日历蓝点/查看编辑均以此为准。
+   微信 4.x 本地库加密（自动读取需读进程内存提密钥、随版本失效）——摘录走粘贴框。 ========== */
+
+const REP = { day: dayKey(new Date()), step: 1, scan: [], wechat: '', aiSum: '',
+              text: '', dates: new Set(), hasSaved: false, pickedKeys: null, repMode: 'edit',
+              drafts: {} };   // 按日未保存草稿缓存（实锤 2026-09-08：设置返回/弹窗重开丢编辑文本）
+const RW_STEPS = ['提交', '微信', '其他事项', '草稿'];
+
+/* ---- 今日量化数据（待办/番茄钟前端自有数据；git 走后端缓存接口） ---- */
+function todayQuant() {
+  const tk = dayKey(new Date());
+  const tc = (CFG.todos || []).filter(t => (t.created_at || '').startsWith(tk)).length;
+  const td = (CFG.todo_history || []).filter(t => (t.closed_at || '').startsWith(tk)).length;
+  const pm = (CFG.pomo_log || []).filter(x => x.date === tk);
+  return { todo_created: tc, todo_closed: td,
+           pomo_min: pm.reduce((s, x) => s + (x.focus_min || 0), 0), pomo_sessions: pm.length };
+}
+
+let tbGit = null;   // 今日 git 统计（顶部条与看板共用，一次拉取）
+
+/* ---- 底部日报 widget 状态 + 顶部今日条（loadData 每次唤起刷新） ---- */
+async function refreshReportState() {
+  try { REP.dates = new Set(await api.report_dates()); } catch (e) { return; }
+  const q = todayQuant();
+  const todoTxt = `闭环 ${q.todo_closed}/${q.todo_created + q.todo_closed}`;
+  const pomoTxt = `专注 ${q.pomo_min}′`;
+  $('#tb-todo').textContent = todoTxt;
+  $('#tb-pomo').textContent = pomoTxt;
+  $('#rw-b-pomo').textContent = pomoTxt;
+  const tk = dayKey(new Date());
+  const r = await api.report_get(tk).catch(() => null);
+  const exists = !!(r && r.exists);
+  $('#tb-report').textContent = exists ? '日报 ✓' : '日报 未生成';
+  $('#tb-report').classList.toggle('done', exists);
+  $('#rw-b-state').textContent = exists ? '日报 ✓' : '日报 未生成';
+  $('#tb-commit').textContent = tbGit ? `提交 ${tbGit.commits}` : '提交 –';
+  $('#rw-b-git').textContent = tbGit
+    ? `提交 ${tbGit.commits}${tbGit.ins + tbGit.dels ? ` (+${tbGit.ins}/-${tbGit.dels})` : ''}` : '提交 –';
+  const gs = await api.report_today_stats(tk).catch(() => null);
+  if (gs) {
+    tbGit = gs;
+    $('#tb-commit').textContent = `提交 ${gs.commits}`;
+    $('#rw-b-git').textContent = `提交 ${gs.commits}${gs.ins + gs.dels ? ` (+${gs.ins}/-${gs.dels})` : ''}`;
+  }
+  const us = await api.report_usage().catch(() => null);
+  if (us && (us.today_p || us.today_c)) {
+    $('#tb-ai').textContent = us.today_cost ? `AI ¥${us.today_cost.toFixed(2)}` : `AI ${(us.today_p + us.today_c).toLocaleString()} tk`;
+  } else {
+    $('#tb-ai').textContent = 'AI –';
+  }
+  renderRecentReports();
+}
+
+async function renderRecentReports() {
+  const el = $('#rw-recent');
+  if (!el) return;
+  const list = await api.report_recent(7).catch(() => []);   // 3→7 条：维护历史日报主要翻查入口（用户拍板）
+  el.innerHTML = '';
+  if (!list.length) { el.innerHTML = '<div class="rr-empty">暂无归档日报 · 点「生成日报」创建今天的</div>'; return; }
+  list.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'rr';
+    row.innerHTML = `<span class="d"></span><span class="s"></span><span class="arr">›</span>`;
+    row.querySelector('.d').textContent = it.day.slice(5);
+    row.querySelector('.s').textContent = it.summary || '（空）';
+    row.title = `${it.day} ${it.updated}\n${it.summary || ''}`;
+    row.addEventListener('click', () => openReport(it.day));   // 直达编辑页（已归档不再走向导分步）
+    el.appendChild(row);
+  });
+}
+
+$('#tb-commit').addEventListener('click', () => showCommitsView());
+$('#tb-todo').addEventListener('click', () => showTodayClosed());
+$('#tb-pomo').addEventListener('click', () => {
+  widgetActive = 'pomo'; CFG.active_widget = 'pomo'; persist(); renderWidgetTabs();
+});
+$('#tb-report').addEventListener('click', () => openReport(dayKey(new Date())));
+$('#tb-ai').addEventListener('click', () => showReportSettings());
+$('#rw-b-git').addEventListener('click', () => showCommitsView());   // 看板数字与顶部条同行为
+
+/* ---- 今日闭环视图：只看今天完成的待办（顶部条「闭环」入口；历史全量仍在待办面板「历史」） ---- */
+function showTodayClosed() {
+  const tk = dayKey(new Date());
+  const items = (CFG.todo_history || []).filter(t => (t.closed_at || '').startsWith(tk));
+  const m = $('#modal');
+  m.classList.remove('wide');
+  const rows = items.map(t => `
+    <div class="hist-item"><span class="txt"></span><span class="time">${hhmm(new Date(t.closed_at))} 闭环</span></div>`).join('');
+  m.innerHTML = `<h3>今日闭环（${items.length} 条）</h3>
+    <div id="hist-list">${rows || '<div class="todo-empty" style="padding:16px 6px">今天还没有闭环记录 · 在左侧待办勾选即计入</div>'}</div>
+    <div class="btns" style="margin-top:12px"><button class="primary" id="m-ok">关闭</button></div>`;
+  m.querySelectorAll('.hist-item').forEach((el, i) => { el.querySelector('.txt').textContent = items[i].text; });
+  $('#modal-mask').classList.add('show');
+  $('#m-ok').addEventListener('click', closeModal);
+}
+
+/* ---- 今日提交浏览视图：按项目分组，只列 时间 / 版本 / 提交信息（不看代码） ---- */
+async function showCommitsView() {
+  const m = $('#modal');
+  m.classList.remove('wide');
+  m.innerHTML = `<h3>今日提交 · 按项目</h3><div id="cv-body" class="rw-empty">扫描中…</div>
+    <div class="btns" style="margin-top:10px"><button class="primary" id="m-ok">关闭</button></div>`;
+  $('#modal-mask').classList.add('show');
+  $('#m-ok').addEventListener('click', closeModal);
+  const repos = await api.report_scan_commits(dayKey(new Date())).catch(() => []);
+  const body = $('#cv-body');
+  if (!body) return;
+  body.className = '';
+  body.innerHTML = '';
+  const total = (repos || []).reduce((s, r) => s + (r.commits || []).length, 0);
+  if (!total) { body.innerHTML = '<div class="rw-empty">今日所选仓库暂无您的提交</div>'; return; }
+  (repos || []).forEach(repo => {
+    if (!repo.commits || !repo.commits.length) return;
+    const rd = document.createElement('div');
+    rd.className = 'rw-repo';
+    rd.style.marginBottom = '8px';
+    const head = document.createElement('div');
+    head.className = 'rw-repo-h';
+    head.textContent = repo.repo;
+    const c = document.createElement('span');
+    c.className = 'cnt';
+    c.textContent = `${repo.commits.length} 条`;
+    head.appendChild(c);
+    rd.appendChild(head);
+    repo.commits.forEach(ci => {
+      const row = document.createElement('div');
+      row.className = 'cv-ci';
+      row.innerHTML = `<span class="t"></span><span class="h"></span><span class="s"></span>`;
+      row.querySelector('.t').textContent = ci.t || '';
+      row.querySelector('.h').textContent = ci.h;
+      row.querySelector('.s').textContent = ci.s;
+      row.querySelector('.s').title = ci.body ? `${ci.s}\n${ci.body}` : ci.s;   // 悬停可见提交说明
+      rd.appendChild(row);
+    });
+    body.appendChild(rd);
+  });
+}
+
+function repStepBars(cur) {
+  return `<div class="rw-steps">${RW_STEPS.map((s, i) =>
+    `<span class="rw-step${i + 1 === cur ? ' on' : (i + 1 < cur ? ' done' : '')}">${i + 1} ${s}</span>`).join('')}</div>`;
+}
+
+/* ---- 向导主渲染（每步整帧重绘；动态文本一律 textContent 填充防注入） ---- */
+function renderReportWizard() {
+  const m = $('#modal'), w = $('#rw-body');
+  m.classList.add('wide');
+  if (REP.step !== 2) clearRepAssetTimer();   // 离开步骤②停素材轮询（renderRepStep2 会重建）
+  $('#rw-head-title').textContent = `工作日报 · ${REP.day}${REP.hasSaved ? '（已归档）' : ''}`;
+  $('#rw-steps').innerHTML = repStepBars(REP.step);
+  $('#rw-prev').style.visibility = REP.step > 1 && REP.step < 4 ? 'visible' : 'hidden';
+  $('#rw-next').textContent = REP.step === 3 ? '生成草稿 →' : '下一步 →';
+  $('#rw-next').style.visibility = REP.step < 4 ? 'visible' : 'hidden';
+  const inStep4 = REP.step === 4;
+  $('#rw-gen').style.display = inStep4 ? '' : 'none';
+  $('#rw-save').style.display = inStep4 ? '' : 'none';
+  $('#rw-export').style.display = inStep4 ? '' : 'none';
+  $('#rw-scan').style.display = REP.step === 1 ? '' : 'none';   // 重新扫描固定左下角，仅步骤①
+  if (REP.step === 1) renderRepStep1(w);
+  else if (REP.step === 2) renderRepStep2(w);
+  else if (REP.step === 3) renderRepStep3(w);
+  else renderRepStep4(w);
+}
+
+/* ---- 步骤①：日期 + 扫描仓库提交（可勾选剔除） ---- */
+async function repScan() {
+  if (REP.scanBusy) return;
+  REP.scanBusy = true;
+  const st = $('#rw-scan-state');
+  if (st) st.textContent = '扫描中…';
+  REP.scan = await api.report_scan_commits(REP.day);
+  REP.scanDone = true;
+  REP.pickedKeys = null;   // 新扫描结果索引已变，勾选恢复默认全选
+  REP.scanBusy = false;
+  renderRepRepos();
+  const st2 = $('#rw-scan-state');
+  if (st2) st2.textContent = '';
+}
+
+function renderRepStep1(box) {
+  box.innerHTML = `
+    <div class="rw-scan-row">
+      <input type="date" id="rw-date" value="${REP.day}">
+      <span class="grow" id="rw-scan-state"></span>
+    </div>
+    <div class="rw-hint">进入本页自动扫描当日提交；勾选要写进日报的条目（作者过滤：设置里可改，默认按 git 全局邮箱）。仓库/作者在 ⚙ 里维护，「重新扫描」在左下角。</div>
+    <div id="rw-repos"></div>`;
+  $('#rw-date').addEventListener('change', async () => {
+    REP.day = $('#rw-date').value || REP.day;
+    // 换日期必须同步当日已归档状态：否则 step4 编辑的是旧内容，保存会覆盖新日期已有日报
+    const r = await api.report_get(REP.day).catch(() => null);
+    REP.hasSaved = !!(r && r.exists);
+    // 未保存草稿优先（保存成功即清 draft，draft 存在必然比归档新）
+    REP.text = REP.drafts[REP.day] !== undefined ? REP.drafts[REP.day] : (r && r.exists ? r.text : '');
+    REP.repMode = r && r.exists && REP.drafts[REP.day] === undefined ? 'view' : 'edit';
+    $('#rw-head-title').textContent = `工作日报 · ${REP.day}${REP.hasSaved ? '（已归档）' : ''}`;
+    // 维护历史日报直达：该日已有归档或未保存草稿时跳过步骤②③空走（用户拍板 2026-09-08）
+    if (REP.hasSaved || REP.drafts[REP.day] !== undefined) {
+      REP.step = 4; renderReportWizard(); return;
+    }
+    // 换日期后旧扫描结果失效，自动重扫
+    REP.scan = []; REP.scanDone = false;
+    renderRepRepos();
+    repScan();
+  });
+  renderRepRepos();
+  // 自动扫描：配置了仓库而用户未手点时也免手点（首用实锤：用户配完仓库直接下一步，
+  // 步骤③被"素材全空"拦截——扫描不应要求第二次手动操作）
+  if (!REP.scanDone) repScan();
+}
+
+function renderRepRepos() {
+  const el = $('#rw-repos'); if (!el) return;
+  if (!REP.scanDone && !REP.scan.length) {
+    el.innerHTML = '<div class="rw-empty">正在扫描当日提交…（仓库为空请点右上角 ⚙ 配置）</div>';
+    return;
+  }
+  el.innerHTML = '';
+  const hasRepos = Array.isArray(REP.scan) && REP.scan.length;
+  if (!hasRepos) { el.innerHTML = '<div class="rw-empty">未配置仓库，请点右上角 ⚙ 添加</div>'; return; }
+  REP.scan.forEach((repo, ri) => {
+    const rd = document.createElement('div');
+    rd.className = 'rw-repo';
+    const head = document.createElement('div');
+    head.className = 'rw-repo-h';
+    if (repo.err) {
+      head.textContent = repo.repo;
+      const e = document.createElement('span'); e.className = 'rerr'; e.textContent = repo.err;
+      head.appendChild(e);
+      rd.appendChild(head); el.appendChild(rd);
+      return;
+    }
+    head.textContent = repo.repo;
+    const c = document.createElement('span'); c.className = 'cnt';
+    c.textContent = repo.commits.length ? `${repo.commits.length} 条` : '无提交';
+    head.appendChild(c);
+    rd.appendChild(head);
+    repo.commits.forEach((ci, i) => {
+      const row = document.createElement('label');
+      row.className = 'rw-ci';
+      const key = `${ri}:${i}`;
+      // 勾选状态持久化在 REP.pickedKeys（null=未交互=全选）：翻页 innerHTML 重绘不丢，
+      // 步骤②③的 repCollected() 不再依赖当前页 DOM（实锤 bug：离开步骤①勾选即焚）
+      const checked = !REP.pickedKeys || REP.pickedKeys.has(key);
+      row.innerHTML = `<input type="checkbox" ${checked ? 'checked' : ''} data-ri="${ri}" data-ci="${i}">
+        <span class="t"></span><span class="s"></span><span class="h"></span><span class="st"></span>`;
+      row.querySelector('input').addEventListener('change', ev => {
+        const cb = ev.target;
+        if (!REP.pickedKeys) {
+          REP.pickedKeys = new Set();
+          REP.scan.forEach((r, ri2) => (r.commits || []).forEach((_, ci2) => REP.pickedKeys.add(`${ri2}:${ci2}`)));
+        }
+        cb.checked ? REP.pickedKeys.add(key) : REP.pickedKeys.delete(key);
+      });
+      row.querySelector('.t').textContent = ci.t || '';
+      row.querySelector('.s').textContent = ci.s;
+      row.querySelector('.s').title = ci.body ? `${ci.s}\n${ci.body}` : ci.s;
+      row.querySelector('.h').textContent = ci.h;
+      row.querySelector('.st').textContent = ci.stat || '';
+      rd.appendChild(row);
+    });
+    el.appendChild(rd);
+  });
+}
+
+function repCollected() {
+  /* 按持久化的勾选集合过滤（pickedKeys=null=全选），与当前步骤 DOM 无关——
+     勾选状态在步骤①的 DOM 里翻页即焚（用户实报步骤③被拦截），故状态入 REP */
+  return (REP.scan || []).map((repo, ri) => ({
+    repo: repo.repo,
+    commits: (repo.commits || []).filter((_, ci) =>
+      !REP.pickedKeys || REP.pickedKeys.has(`${ri}:${ci}`)),
+  })).filter(r => r.commits.length);
+}
+
+/* ---- 步骤②③：素材粘贴框 ---- */
+let repAssetTimer = null;    // 步骤②后台 OCR 轮询定时器（离开步骤②/关弹窗即清）
+let repAssetSeq = null;      // 已同步到的 OCR 任务序号（变化才刷新素材列表）
+
+function clearRepAssetTimer() {
+  clearInterval(repAssetTimer); repAssetTimer = null;
+}
+
+function renderRepStep2(box) {
+  box.innerHTML = `<div class="rw-hint">素材库（两者可并用）：① 鼠标侧键——刷微信看到工作内容按侧键，弹出确认框选「是」后自动 OCR 识别成文字（后台进行，可继续操作；识别失败个别图自动走读图兜底，最多 5 张）；② 直接粘贴文字摘录。</div>
+    <div id="rw-assets" class="rw-assets">加载中…</div>
+    <textarea id="rw-wechat" placeholder="补充粘贴文字摘录（可留空）…"></textarea>`;
+  $('#rw-wechat').value = REP.wechat;
+  renderRepAssets();
+  // 后台 OCR 轮询：识别完成（任务序号前进）自动刷新素材列表与"已识别 N 张"计数，无需重进步骤②
+  clearRepAssetTimer();
+  repAssetSeq = null;
+  repAssetTimer = setInterval(async () => {
+    const st = await api.report_ocr_poll().catch(() => null);
+    if (!st) return;
+    if (repAssetSeq !== null && st.seq !== repAssetSeq) renderRepAssets();
+    repAssetSeq = st.seq;
+  }, 1500);
+}
+
+async function renderRepAssets() {
+  const el = $('#rw-assets');
+  if (!el) return;
+  const list = await api.report_wechat_assets(REP.day).catch(() => []);
+  el.innerHTML = '';
+  if (!list.length) {
+    el.innerHTML = '<div class="ra-empty">今日素材库为空 · 在微信里按鼠标侧键即可采集截图</div>';
+    return;
+  }
+  const ocrN = list.filter(x => (x.text || '').trim()).length;
+  const cap = document.createElement('div');
+  cap.className = 'ra-count';
+  cap.textContent = `今日截图素材 ${list.length} 张，${ocrN} 张已识别为文字` +
+    (list.length - ocrN ? `（${list.length - ocrN} 张生成时走读图兜底）` : '');
+  el.appendChild(cap);
+  const strip = document.createElement('div');
+  strip.className = 'ra-strip';
+  list.forEach(it => {
+    const cell = document.createElement('div');
+    cell.className = 'ra-cell';
+    cell.innerHTML = `<img><button class="ra-del" title="删除">×</button><span class="ra-err">加载失败</span>`;
+    cell.querySelector('img').src = it.uri;   // data URI 内联（file:// 在 WebView2 中加载失败，见后端注释）
+    const firstLine = (it.text || '').trim().split('\n')[0] || '';
+    cell.querySelector('img').title = it.name + (firstLine ? `\n${(it.text || '').trim()}` : '') + '\n（点击放大）';
+    cell.querySelector('img').addEventListener('error', () => cell.classList.add('bad'));
+    cell.querySelector('img').addEventListener('click', () => showImageViewer(it.uri, it.name));
+    cell.querySelector('.ra-del').addEventListener('click', async () => {
+      if (await api.report_wechat_asset_delete(REP.day, it.name)) renderRepAssets();
+    });
+    strip.appendChild(cell);
+  });
+  el.appendChild(strip);
+}
+function renderRepStep3(box) {
+  box.innerHTML = `<div class="rw-hint">补充 git 和微信之外的零散工作：领导临时安排（如调试网络）、面试/接待、与 AI（ZCode / Claude 等）协作完成的摘要等，一行一条随手记（可留空跳过）。</div>
+    <textarea id="rw-ai" placeholder="如：&#10;协助领导调试会议室网络&#10;面试候选人 1 名&#10;用 ZCode 完成互斥指令 BUG 修复"></textarea>`;
+  $('#rw-ai').value = REP.aiSum;
+}
+
+/* ---- 步骤④：AI 生成 → 编辑定稿 → 归档/另存（预览态 = 内置 md 渲染） ---- */
+function renderRepStep4(box) {
+  box.innerHTML = `
+    <div class="rw-hint">点下方「AI 生成草稿」由配置的云端 AI 汇总三份素材成文（可反复生成）；编辑定稿后「保存归档」。${REP.hasSaved ? '当日已有归档，直接编辑保存即可。' : ''}</div>
+    <div class="rw-mode-bar">
+      <button type="button" id="rw-mode-edit">编辑</button>
+      <button type="button" id="rw-mode-view">预览</button>
+    </div>
+    <div class="rw-editor-wrap">
+      <textarea id="rw-text" placeholder="AI 草稿或手写日报（Markdown）…" style="min-height:240px"></textarea>
+      <div id="rw-preview" class="rw-preview" style="display:none"></div>
+      <div id="rw-live" class="rw-live" style="display:none">
+        <div class="rw-live-head"><span class="spinner"></span><span id="rw-live-title">AI 正在思考…</span></div>
+        <div id="rw-live-think" class="rw-live-think"></div>
+      </div>
+    </div>`;
+  $('#rw-text').value = REP.text;
+  $('#rw-text').addEventListener('input', () => {
+    REP.text = $('#rw-text').value;
+    REP.drafts[REP.day] = REP.text;   // 未保存草稿按日缓存（弹窗被关/重开不丢）
+    if (REP.repMode === 'view') $('#rw-preview').innerHTML = mdToHtml(REP.text);
+  });
+  $('#rw-mode-edit').addEventListener('click', () => repSetMode('edit'));
+  $('#rw-mode-view').addEventListener('click', () => repSetMode('view'));
+  repSetMode(REP.repMode || 'edit');
+  setRepFoot();
+}
+
+function repSetMode(mode) {
+  REP.repMode = mode;
+  const ta = $('#rw-text'), pv = $('#rw-preview');
+  if (!ta || !pv) return;
+  ta.style.display = mode === 'edit' ? '' : 'none';
+  pv.style.display = mode === 'view' ? '' : 'none';
+  if (mode === 'view') pv.innerHTML = mdToHtml(REP.text);
+  const be = $('#rw-mode-edit'), bv = $('#rw-mode-view');
+  if (be) be.classList.toggle('on', mode === 'edit');
+  if (bv) bv.classList.toggle('on', mode === 'view');
+}
+
+/* ---- 轻量 Markdown → HTML（内置零依赖，工具要求纯离线不引 CDN）。
+   覆盖日报体例子集：# 标题 / - 列表 / **加粗** / `行内码` / 段落与换行；
+   其余语法原样透传为纯文本（日报用不到，不追求完整规范） ---- */
+function mdToHtml(src) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = s => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  let html = '', inUl = false, para = [];
+  const flushP = () => { if (para.length) { html += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } };
+  const closeUl = () => { if (inUl) { html += '</ul>'; inUl = false; } };
+  (src || '').split(/\r?\n/).forEach(raw => {
+    const l = raw.trimEnd();
+    const h = l.match(/^(#{1,6})\s+(.*)$/);
+    const li = l.match(/^\s*[-*]\s+(.*)$/);
+    if (h) { flushP(); closeUl(); const lv = Math.min(6, h[1].length + 2); html += `<h${lv}>${inline(h[2])}</h${lv}>`; }
+    else if (li) { flushP(); if (!inUl) { html += '<ul>'; inUl = true; } html += `<li>${inline(li[1])}</li>`; }
+    else if (!l.trim()) { flushP(); closeUl(); }
+    else { closeUl(); para.push(l.trim()); }
+  });
+  flushP(); closeUl();
+  return html;
+}
+
+let repPollTimer = null;
+
+/* ---- 图片预览层：缩略图点击放大，点击任意处/Esc 关闭 ---- */
+function showImageViewer(uri, name) {
+  const v = $('#img-viewer'), img = v.querySelector('img');
+  img.src = uri;
+  img.alt = name || '';
+  v.classList.add('show');
+}
+(function bindImageViewer() {
+  const v = $('#img-viewer');
+  v.addEventListener('click', () => { v.classList.remove('show'); v.querySelector('img').src = ''; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && v.classList.contains('show')) { v.classList.remove('show'); v.querySelector('img').src = ''; }
+  });
+})();
+
+function repBtnsDisabled(dis) {
+  ['rw-gen', 'rw-save', 'rw-export'].forEach(id => { const b = $('#' + id); if (b) b.disabled = dis; });
+}
+
+function repShowLive(on) {
+  const el = $('#rw-live');
+  if (el) el.style.display = on ? 'flex' : 'none';
+  repBtnsDisabled(on);
+}
+
+async function repGenerate() {
+  const assets = await api.report_wechat_assets(REP.day).catch(() => []);
+  // 只传文件名：后端按名自读同名 .txt 的 OCR 文本（曾传完整对象数组被后端全部丢弃——
+  // OCR 内容进不了日报的实锤根因，2026-09-04 修复）
+  const assetNames = assets.slice(-20).map(a => a.name);
+  const r0 = await api.report_ai_start(REP.day, JSON.stringify(repCollected()), REP.wechat, REP.aiSum,
+                                       JSON.stringify(todayQuant()),           // 素材四：今日量化数据
+                                       JSON.stringify(assetNames));            // 截屏素材名（最近 20 张）
+  if (!r0.ok) return toast(r0.why || 'AI 生成启动失败');
+  repShowLive(true);
+  setRepFoot('生成中…面板内可实时查看 AI 思考过程', true);
+  clearInterval(repPollTimer);
+  repPollTimer = setInterval(async () => {
+    const r = await api.report_ai_poll(r0.task);
+    if (r.status === 'gone') { repPollEnd(); return toast('生成任务已失效，请重试'); }
+    repRenderLive(r);
+    if (r.status === 'done') {
+      repPollEnd(); setRepFoot('', false);
+      REP.text = r.content; REP.hasSaved = false;
+      REP.drafts[REP.day] = REP.text;
+      $('#rw-text').value = REP.text;
+      if (REP.repMode === 'view') repSetMode('view');   // 预览态下生成完成同步刷新渲染
+      setRepFoot('草稿已生成，请编辑定稿');
+    } else if (r.status === 'error') {
+      repPollEnd(); setRepFoot('', false);
+      if (r.content) { REP.text = r.content; REP.drafts[REP.day] = r.content; $('#rw-text').value = r.content; }   // 断流前已生成的部分保留
+      toast(r.why || 'AI 生成失败');
+    }
+  }, 600);
+}
+
+function repPollEnd() {
+  clearInterval(repPollTimer); repPollTimer = null;
+  repShowLive(false);
+}
+
+function repRenderLive(r) {
+  const t = $('#rw-live-title'), th = $('#rw-live-think');
+  if (!t) return;
+  t.textContent = r.content ? '正文生成中…' : 'AI 正在思考…';
+  if (r.reasoning) {
+    th.style.display = '';
+    if (th.textContent !== r.reasoning) {   // 轮询返回累计文本，变化才重排
+      th.textContent = r.reasoning;
+      th.scrollTop = th.scrollHeight;       // 自动滚到思考最新处
+    }
+  } else {
+    th.style.display = 'none';              // 模型无思考输出则隐藏思考区
+  }
+}
+
+function setRepFoot(state, busy) {
+  const s = $('#rw-foot-state');
+  if (s) { s.textContent = state || ''; s.classList.toggle('busy', !!busy); }
+}
+
+async function repSave() {
+  const r = await api.report_save(REP.day, REP.text);   // 源用 REP.text（预览态下 textarea 隐藏但状态不丢）
+  if (!r.ok) return toast(r.why || '保存失败');
+  delete REP.drafts[REP.day];   // 已入库，草稿缓存清掉（重开走归档加载）
+  REP.hasSaved = true;
+  $('#rw-head-title').textContent = `工作日报 · ${REP.day}（已归档）`;
+  setRepFoot(`已归档：${r.path}`);
+  toast('日报已归档 ✓');
+  refreshReportState();
+}
+
+async function repExport() {
+  let r = await api.report_export(REP.day);
+  if (r.exists) {
+    const ok = await showConfirm('覆盖确认', `目标文件已存在：\n${r.path}\n覆盖它吗？`);
+    if (ok) r = await api.report_export(REP.day, true);
+  }
+  toast(r.ok ? `已另存：${r.path}` : (r.why || '另存失败'));
+}
+
+/* ---- AI 厂商预设（2026-09 官方文档实检，base_url + model ID 均来自官方原文；
+   旧模型名（deepseek-chat / kimi-k2 系列 / moonshot-v1 系列）已从各家当前文档消失，勿回填。
+   Anthropic 因文档站区域封锁未能取证，暂不进表，走「自定义」） ---- */
+const AI_PROVIDERS = [
+  { id: 'zhipu', label: '智谱 AI', base: 'https://open.bigmodel.cn/api/paas/v4',
+    models: ['glm-5.3', 'glm-5.2', 'glm-5.3-flash'] },
+  { id: 'deepseek', label: 'DeepSeek', base: 'https://api.deepseek.com',
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-v4-flash-vision-exp'] },
+  { id: 'qwen', label: '通义千问（阿里云百炼）', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    models: ['qwen3.8-max', 'qwen3.7-plus', 'qwen3.8-flash'] },
+  { id: 'kimi', label: 'Kimi（月之暗面）', base: 'https://api.moonshot.cn/v1',
+    models: ['kimi-k3', 'kimi-k2.6', 'kimi-k2.7-code', 'kimi-k2.7-code-highspeed'] },
+  { id: 'custom', label: '自定义', base: '', models: [] },
+];
+
+/* ---- 设置模态（仓库浏览添加 / 作者 / 另存目录 / AI 厂商下拉+热门模型下拉）。
+   与向导共用 #modal 单例：从向导打开会顶掉骨架，关闭后重放骨架——
+   素材数据全在 REP 对象上，重放不丢内容 ---- */
+async function showReportSettings(fromWizard) {
+  const st = await api.report_get_settings();
+  const repos = [...(st.repos || [])];
+  const m = $('#modal');
+  m.classList.remove('wide');
+  m.innerHTML = `<h3>日报设置</h3>
+    <div class="rw-form">
+      <label>仓库列表</label>
+      <div>
+        <div id="rs-repos" class="rs-list"></div>
+        <button class="mini-btn" id="rs-add-repo">＋ 浏览添加仓库</button>
+      </div>
+      <label>作者过滤</label><input id="rs-author" placeholder="留空 = 自动用 git 全局 user.email">
+      <label>微信昵称</label><input id="rs-wxname" placeholder="您在微信里的显示名（区分谁在说话），如：yy">
+      <label>侧键截屏</label><label style="display:flex; gap:6px; align-items:center; color:var(--text-2); cursor:pointer">
+        <input type="checkbox" id="rs-shot" style="width:auto"> 启用鼠标侧键截屏采集素材（截取前台窗口，系统提示确认）</label>
+      <label>截屏裁左</label><input id="rs-crop" type="number" min="0" max="800" placeholder="裁掉左侧像素，只留右侧对话区（0=整窗，默认 335）">
+      <label>另存目录</label>
+      <div style="display:flex; gap:6px">
+        <input id="rs-export" style="flex:1" placeholder="日报一键另存目录（可空）">
+        <button class="mini-btn" id="rs-pick-export">浏览</button>
+      </div>
+      <div class="sep"></div>
+      <label>AI 厂商</label><select id="rs-vendor"></select>
+      <label>API 密钥</label><input id="rs-key" type="password" placeholder="sk-…">
+      <label>模型</label><div id="rs-model-box"></div>
+      <div id="rs-custom-row" style="display:none">
+        <label>接口地址</label><input id="rs-base" placeholder="OpenAI 兼容接口地址（含 /v1）">
+      </div>
+      <label>单价(输入)</label><input id="rs-pin" type="number" step="0.0001" min="0" placeholder="元/百万tokens，用于花费估算（可空）">
+      <label>单价(输出)</label><input id="rs-pout" type="number" step="0.0001" min="0" placeholder="元/百万tokens（可空）">
+      <div class="rs-usage" id="rs-usage">AI 用量：读取中…</div>
+    </div>
+    <div class="err" id="rs-err"></div>
+    <div class="btns"><button id="m-cancel">取消</button><button class="primary" id="m-ok">保存</button></div>`;
+  $('#rs-author').value = st.author || '';
+  $('#rs-wxname').value = st.wechat_name || '';
+  $('#rs-shot').checked = st.shot !== false;
+  $('#rs-crop').value = st.crop_left !== undefined ? st.crop_left : 335;
+  $('#rs-export').value = st.export_dir || '';
+  $('#rs-key').value = st.ai.api_key || '';
+  $('#rs-pin').value = st.ai.price_in || '';
+  $('#rs-pout').value = st.ai.price_out || '';
+  $('#modal-mask').classList.add('show');
+  api.report_usage().then(u => {
+    const t = (u.total_p || 0) + (u.total_c || 0);
+    const td = (u.today_p || 0) + (u.today_c || 0);
+    $('#rs-usage').textContent = t
+      ? `AI 用量：累计 ${t.toLocaleString()} tokens${u.total_cost ? ` · ¥${u.total_cost.toFixed(2)}` : ''}（今日 ${td.toLocaleString()} tokens${u.today_cost ? ` · ¥${u.today_cost.toFixed(2)}` : ''}；生成日报自动记账）`
+      : 'AI 用量：暂无记录（生成日报后自动记账；填单价才有金额估算）';
+  }).catch(() => { $('#rs-usage').textContent = 'AI 用量：读取失败'; });
+
+  /* 仓库列表（浏览添加，删除即重渲） */
+  const rsRenderRepos = () => {
+    const el = $('#rs-repos');
+    el.innerHTML = repos.length ? '' : '<div class="rw-empty" style="padding:6px 0">尚未添加仓库</div>';
+    repos.forEach((p, i) => {
+      const row = document.createElement('div'); row.className = 'rs-repo';
+      const s = document.createElement('span'); s.className = 'p'; s.textContent = p; s.title = p;
+      const x = document.createElement('button'); x.className = 'mini-btn'; x.textContent = '✕'; x.title = '移除';
+      x.addEventListener('click', () => { repos.splice(i, 1); rsRenderRepos(); });
+      row.appendChild(s); row.appendChild(x); el.appendChild(row);
+    });
+  };
+  rsRenderRepos();
+  $('#rs-add-repo').addEventListener('click', async () => {
+    const r = await api.pick_dir(false);   // false：不做自定义应用查重（两个体系）
+    if (!r) return;
+    if (r.err) return toast(r.err);
+    if (repos.some(x => x.toLowerCase() === r.path.toLowerCase())) return toast('该仓库已在列表中');
+    repos.push(r.path); rsRenderRepos();
+  });
+  $('#rs-pick-export').addEventListener('click', async () => {
+    const r = await api.pick_dir(false);
+    if (r && r.path) $('#rs-export').value = r.path;
+  });
+
+  /* AI 厂商/模型联动：已存 base_url 精确匹配预设定厂商；匹配不到回「自定义」保底回填 */
+  const curV = AI_PROVIDERS.find(v => v.base && v.base.replace(/\/+$/, '').toLowerCase()
+    === (st.ai.base_url || '').replace(/\/+$/, '').toLowerCase());
+  const vendorSel = $('#rs-vendor');
+  vendorSel.innerHTML = AI_PROVIDERS.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
+  vendorSel.value = curV ? curV.id : 'custom';
+  const rsRenderModel = () => {
+    const v = AI_PROVIDERS.find(x => x.id === vendorSel.value);
+    $('#rs-custom-row').style.display = v.base ? 'none' : 'contents';
+    const box = $('#rs-model-box');
+    if (v.base) {
+      const opts = [...v.models];
+      if (curV && vendorSel.value === curV.id && st.ai.model && !opts.includes(st.ai.model))
+        opts.unshift(st.ai.model);   // 预设已更新但配置里是旧模型名：保底列出，不静默丢失
+      box.innerHTML = `<select id="rs-model">${opts.map(mo => `<option>${mo}</option>`).join('')}</select>`;
+      if (opts.includes(st.ai.model)) $('#rs-model').value = st.ai.model;
+    } else {
+      box.innerHTML = `<input id="rs-model" placeholder="模型名，如 glm-4-flash">`;
+      $('#rs-model').value = st.ai.model || '';
+      $('#rs-base').value = st.ai.base_url || '';
+    }
+  };
+  vendorSel.addEventListener('change', rsRenderModel);
+  rsRenderModel();
+
+  const leave = () => {
+    if (fromWizard) { buildReportShell(); reopenModal(); renderReportWizard(); }
+  };
+  /* Esc = 取消（设置界面此前无 Esc 处理；从向导进来的同样保证返回向导） */
+  const escHandler = ev => {
+    if (ev.key !== 'Escape') return;
+    document.removeEventListener('keydown', escHandler);
+    const c = $('#m-cancel');
+    if (c) c.click();
+  };
+  document.addEventListener('keydown', escHandler);
+  $('#m-ok').addEventListener('click', async () => {
+    const v = AI_PROVIDERS.find(x => x.id === vendorSel.value);
+    const r = await api.report_save_settings(JSON.stringify({
+      repos,
+      author: $('#rs-author').value,
+      wechat_name: $('#rs-wxname').value,
+      shot: $('#rs-shot').checked,
+      crop_left: parseInt($('#rs-crop').value, 10) || 0,
+      export_dir: $('#rs-export').value,
+      ai: { base_url: v.base || $('#rs-base').value, api_key: $('#rs-key').value, model: $('#rs-model').value,
+            price_in: parseFloat($('#rs-pin').value) || 0, price_out: parseFloat($('#rs-pout').value) || 0 },
+    }));
+    if (!r.ok) return $('#rs-err').textContent = r.why || '保存失败';
+    REP.scanDone = false;   // 配置可能已变（仓库/作者），返回向导后步骤①自动重扫
+    document.removeEventListener('keydown', escHandler);
+    closeModal(); leave();   // 同步返回：closeModal 的出场动画由 reopenModal 收尾，不再留 60ms 竞态窗口
+    toast('日报设置已保存 ✓');
+  });
+  $('#m-cancel').addEventListener('click', () => {
+    document.removeEventListener('keydown', escHandler);
+    closeModal(); leave();
+  });
+}
+
+/* ---- 向导模态骨架（openReport 与"从设置返回"共用；事件只绑一次） ---- */
+function buildReportShell() {
+  const m = $('#modal');
+  m.classList.add('wide');
+  m.innerHTML = `<div id="rw-head">
+      <h3 id="rw-head-title">工作日报</h3>
+      <button class="mini-btn" id="rw-cfg" title="仓库 / 作者 / AI 接口设置">⚙</button>
+      <button class="mini-btn" id="rw-close">✕</button>
+    </div>
+    <div id="rw-steps"></div>
+    <div id="rw-body"></div>
+    <div class="rw-foot">
+      <button id="rw-scan" class="mini-btn" style="display:none">重新扫描</button>
+      <span class="state" id="rw-foot-state"></span>
+      <button id="rw-prev">← 上一步</button>
+      <button id="rw-gen" class="mini-btn" style="display:none">AI 生成草稿</button>
+      <button id="rw-save" class="mini-btn" style="display:none">保存归档</button>
+      <button id="rw-export" class="mini-btn" style="display:none">另存到外部目录</button>
+      <button id="rw-next" class="primary">下一步 →</button>
+    </div>`;
+  $('#rw-cfg').addEventListener('click', () => showReportSettings(true));
+  $('#rw-close').addEventListener('click', () => {
+    if (repPollTimer) { clearInterval(repPollTimer); repPollTimer = null; }   // 生成中直接关：停轮询防泄漏
+    clearRepAssetTimer();
+    closeModal(); refreshReportState();
+  });
+  $('#rw-prev').addEventListener('click', () => { if (REP.step > 1) { REP.step--; renderReportWizard(); } });
+  $('#rw-next').addEventListener('click', () => {
+    if (REP.step === 1 && $('#rw-date')) REP.day = $('#rw-date').value || REP.day;
+    if (REP.step === 2 && $('#rw-wechat')) REP.wechat = $('#rw-wechat').value;
+    if (REP.step === 3) {
+      if ($('#rw-ai')) REP.aiSum = $('#rw-ai').value;
+      if (!REP.hasSaved && !REP.text.trim() && !REP.wechat.trim() && !REP.aiSum.trim() && !repCollected().length) {
+        // 分场景给准确提示（首用实锤：笼统"素材全空"让配置过仓库的用户摸不着头脑）
+        if (!REP.scanDone) return toast('提交还在扫描中，请稍候再点');
+        const n = (REP.scan || []).reduce((s, r) => s + (r.commits || []).length, 0);
+        return toast(n ? '微信与 AI 摘要均为空：至少填一项，或回步骤①勾选提交'
+                       : '今日所选仓库无您的提交：请粘贴微信/AI 素材，或检查仓库与日期');
+      }
+      REP.step = 4; renderReportWizard(); return;
+    }
+    if (REP.step < 4) { REP.step++; renderReportWizard(); }
+  });
+  $('#rw-save').addEventListener('click', repSave);
+  $('#rw-export').addEventListener('click', repExport);
+  $('#rw-gen').addEventListener('click', repGenerate);
+  $('#rw-scan').addEventListener('click', repScan);   // 按钮常驻 foot 左下角，仅步骤①显示
+}
+
+/* ---- 打开向导：day 传入时预选日期（日历「生成该日日报」入口） ---- */
+async function openReport(day) {
+  if (day) REP.day = day;
+  REP.step = 1; REP.scan = []; REP.scanDone = false;
+  REP.wechat = ''; REP.aiSum = ''; REP.hasSaved = false;
+  clearRepAssetTimer();
+  buildReportShell();
+  const r = await api.report_get(REP.day).catch(() => null);
+  // 未保存草稿优先于归档（保存成功即清 draft，故 draft 存在时必然比归档新）
+  REP.text = (REP.drafts[REP.day] !== undefined) ? REP.drafts[REP.day] : (r && r.exists ? r.text : '');
+  if (r && r.exists) {
+    REP.hasSaved = true;
+    REP.repMode = REP.drafts[REP.day] !== undefined ? 'edit' : 'view';   // 有未保存草稿回编辑态，纯查看默认预览态
+    REP.step = 4;   // 已归档直达草稿页（用户实报：从步骤①走三步才看到日报，形同纯展示）
+  } else {
+    REP.repMode = 'edit';
+  }
+  $('#modal-mask').classList.add('show');
+  renderReportWizard();
+}
+
+$('#rw-open').addEventListener('click', () => openReport());
+$('#rw-edit').addEventListener('click', () => openReport(dayKey(new Date())));
+
+
+/* ========== 右侧小工具区：tab 切换机制（番茄钟为首个，后续追加 WIDGETS 即可） ========== */
+
+const WIDGETS = [
+  { id: 'pomo', label: '番茄钟', icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>' },
+  { id: 'notes', label: '记事本', icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' },
+  { id: 'report', label: '日报', icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>' },
+];
+let widgetActive = 'pomo';
+
+function renderWidgetTabs() {
+  const bar = $('#widget-tabs'); bar.innerHTML = '';
+  WIDGETS.forEach(w => {
+    const el = document.createElement('button');
+    el.className = 'wtab' + (widgetActive === w.id ? ' active' : '');
+    el.dataset.w = w.id;
+    el.innerHTML = `${w.icon}${w.label}`;
+    el.onclick = () => {
+      widgetActive = w.id;
+      CFG.active_widget = w.id;   // 记住上次使用的工具（与分组记忆同套路）
+      persist();
+      renderWidgetTabs();
+    };
+    bar.appendChild(el);
+  });
+  // 同步切换面板可见性（面板 id 约定：w-{widget id}）——漏掉这步曾导致番茄钟空白
+  document.querySelectorAll('.widget').forEach(el => {
+    el.classList.toggle('show', el.id === 'w-' + widgetActive);
+  });
+}
+
+/* ========== 番茄钟（时间戳驱动：WebView2 页面不可见时 setInterval 被节流至 1Hz，
+   用剩余毫秒数而非 tick 计数，节流/休眠都不丢时；到点走系统 toast 通知） ========== */
+
+const POMO = { focus: 25, rest: 5, mode: 'focus', total: 25 * 60, remain: 25 * 60, endAt: null, running: false };
+let pomoCfgLoaded = false;   // 时长配置是否已从 config 恢复过（防每次唤起重置暂停状态）
+const RING_LEN = 2 * Math.PI * 52;   // r=52 周长
+const pomoLen = () => (POMO.mode === 'focus' ? POMO.focus : POMO.rest) * 60;
+
+function pomoRender() {
+  const m = Math.floor(POMO.remain / 60), s = Math.floor(POMO.remain % 60);
+  $('#pomo-time').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  $('#pomo-ring').style.strokeDasharray = RING_LEN;
+  $('#pomo-ring').style.strokeDashoffset = RING_LEN * (1 - POMO.remain / POMO.total);
+  const isBreak = POMO.mode === 'rest';
+  $('#pomo-mode').textContent = isBreak ? `☕ 休息 ${POMO.rest}′` : `🍅 专注 ${POMO.focus}′`;
+  $('#pomo-toggle').textContent = POMO.running ? '暂停' : (POMO.remain < POMO.total ? '继续' : '开始');
+  $('#pomo-state').textContent = POMO.running
+    ? (isBreak ? '休息中…' : '专注中…')
+    : (POMO.remain < POMO.total ? '已暂停' : (isBreak ? '准备休息' : '准备专注'));
+  $('.pomo-ring').classList.toggle('break', isBreak);
+}
+
+function pomoToggle() {
+  if (POMO.running) {                       // 暂停：冻结剩余秒数
+    POMO.remain = Math.max(0, (POMO.endAt - Date.now()) / 1000);
+    POMO.running = false; POMO.endAt = null;
+  } else {                                  // 开始/继续：按剩余秒数定终点
+    POMO.endAt = Date.now() + POMO.remain * 1000;
+    POMO.running = true;
+  }
+  pomoRender();
+}
+
+function pomoSwitchMode() {
+  POMO.mode = POMO.mode === 'focus' ? 'rest' : 'focus';
+  POMO.total = pomoLen(); POMO.remain = POMO.total;
+  POMO.running = false; POMO.endAt = null;
+  pomoRender();
+}
+
+function pomoReset() {
+  POMO.total = pomoLen(); POMO.remain = POMO.total;
+  POMO.running = false; POMO.endAt = null;
+  pomoRender();
+}
+
+function pomoFinish() {
+  POMO.running = false; POMO.endAt = null; POMO.remain = 0;
+  const wasFocus = POMO.mode === 'focus';
+  if (wasFocus) {
+    // 完成一段专注即落盘（今日看板/顶部条/日报素材四的数据源；只保最近 60 天）
+    const tk = dayKey(new Date());
+    CFG.pomo_log = (CFG.pomo_log || []).filter(x => x.date >= dayKey(new Date(Date.now() - 60 * 864e5)));
+    CFG.pomo_log.push({ date: tk, focus_min: POMO.focus, at: new Date().toISOString() });
+    persist();
+  }
+  api.notify('YY工具箱 · 番茄钟',
+    wasFocus ? `🍅 专注 ${POMO.focus} 分钟完成，休息一下吧！` : '☕ 休息结束，继续专注！');
+  pomoSwitchMode();                          // 自动切到另一模式待命
+}
+
+/* ---- 时长配置（⚙）：双输入 + 校验，持久化到 config（下次启动恢复） ---- */
+function showPomoConfig() {
+  return new Promise(resolve => {
+    const mask = $('#modal-mask'), m = $('#modal');
+    m.innerHTML = `<h3>番茄钟时长</h3>
+      <div class="pomo-cfg-row"><label>专注（分钟）</label><input id="pc-focus" type="number" min="1" max="180" value="${POMO.focus}"></div>
+      <div class="pomo-cfg-row"><label>休息（分钟）</label><input id="pc-rest" type="number" min="1" max="60" value="${POMO.rest}"></div>
+      <div class="err" id="pc-err"></div>
+      <div class="btns"><button id="m-cancel">取消</button><button class="primary" id="m-ok">保存</button></div>`;
+    mask.classList.add('show');
+    const fi = $('#pc-focus'), ri = $('#pc-rest');
+    fi.focus(); fi.select();
+    const done = v => { closeModal(); resolve(v); };
+    $('#m-ok').addEventListener('click', () => {
+      const f = parseInt(fi.value, 10), r = parseInt(ri.value, 10);
+      if (!(f >= 1 && f <= 180)) return $('#pc-err').textContent = '专注时长须为 1–180 的整数';
+      if (!(r >= 1 && r <= 60)) return $('#pc-err').textContent = '休息时长须为 1–60 的整数';
+      done({ focus: f, rest: r });
+    });
+    $('#m-cancel').addEventListener('click', () => done(null));
+    fi.addEventListener('keydown', ev => { if (ev.key === 'Enter') ri.focus(); });
+    ri.addEventListener('keydown', ev => { if (ev.key === 'Enter') $('#m-ok').click(); });
+  });
+}
+
+$('#pomo-cfg').addEventListener('click', async () => {
+  const v = await showPomoConfig();
+  if (!v) return;
+  POMO.focus = v.focus; POMO.rest = v.rest;
+  CFG.pomo_focus = v.focus; CFG.pomo_rest = v.rest;   // 持久化（下次启动恢复）
+  persist();
+  if (!POMO.running) {                                 // 空闲态立即按新时长重置显示；计时中不打断，下次生效
+    POMO.total = pomoLen(); POMO.remain = POMO.total; POMO.endAt = null;
+  }
+  pomoRender();
+});
+
+setInterval(() => {
+  if (!POMO.running) return;
+  POMO.remain = (POMO.endAt - Date.now()) / 1000;
+  if (POMO.remain <= 0) return pomoFinish();
+  pomoRender();
+}, 500);
+
+$('#pomo-toggle').addEventListener('click', pomoToggle);
+$('#pomo-mode').addEventListener('click', pomoSwitchMode);
+$('#pomo-reset').addEventListener('click', pomoReset);
+renderWidgetTabs();
+pomoRender();
+
+/* ========== 记事本（多页：notes_pages 数组 + notes_page 当前页；内容防抖持久化） ========== */
+
+let notesBound = false;   // 编辑器是否已绑定过服务端数据（首次绑定后编辑器即事实源）
+
+function notesNormalize() {
+  if (!Array.isArray(CFG.notes_pages)) CFG.notes_pages = [];
+  // 旧版单字段迁移：非空 notes → 第 1 页
+  if (typeof CFG.notes === 'string' && CFG.notes) {
+    if (!CFG.notes_pages.length) CFG.notes_pages = [CFG.notes];
+    delete CFG.notes;
+  }
+  if (!CFG.notes_pages.length) CFG.notes_pages = [''];
+  if (typeof CFG.notes_page !== 'number' || CFG.notes_page < 0 || CFG.notes_page >= CFG.notes_pages.length) {
+    CFG.notes_page = 0;
+  }
+}
+
+function renderNotesPager() {
+  $('#np-ind').textContent = `${CFG.notes_page + 1} / ${CFG.notes_pages.length}`;
+  $('#np-prev').disabled = CFG.notes_page <= 0;
+  $('#np-next').disabled = CFG.notes_page >= CFG.notes_pages.length - 1;
+}
+
+function gotoNotesPage(i) {
+  const ed = $('#notes-editor');
+  CFG.notes_pages[CFG.notes_page] = ed.innerHTML;          // 存住当前页
+  if (i >= CFG.notes_pages.length) CFG.notes_pages.push('');   // 越界目标 = 新建一页
+  CFG.notes_page = Math.max(0, i);
+  ed.innerHTML = CFG.notes_pages[CFG.notes_page] ?? '';
+  renderNotesPager();
+  persist();                                                // 翻页低频，立即落盘记住页码
+}
+
+(function initNotes() {
+  const editor = $('#notes-editor');
+  notesNormalize();
+  editor.innerHTML = CFG.notes_pages[CFG.notes_page];
+  renderNotesPager();
+
+  // 工具栏：mousedown 阻止默认（防编辑区失焦丢选区），click 执行命令
+  document.querySelectorAll('.notes-toolbar .nt-btn').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', () => {
+      editor.focus();                                    // 选区保住后再聚焦
+      if (btn.dataset.size) document.execCommand('fontSize', false, btn.dataset.size);
+      else document.execCommand(btn.dataset.cmd, false, null);
+      notesPersist();
+    });
+  });
+  $('#np-prev').addEventListener('click', () => gotoNotesPage(CFG.notes_page - 1));
+  $('#np-next').addEventListener('click', () => gotoNotesPage(CFG.notes_page + 1));
+  $('#np-add').addEventListener('click', () => gotoNotesPage(CFG.notes_pages.length));
+  $('#np-del').addEventListener('click', () => {
+    if (CFG.notes_pages.length <= 1) {           // 仅剩一页：清空内容保底一页
+      CFG.notes_pages = ['']; CFG.notes_page = 0;
+    } else {
+      CFG.notes_pages.splice(CFG.notes_page, 1); // 删当前页，索引停在原下一页；删末页则回退
+      if (CFG.notes_page >= CFG.notes_pages.length) CFG.notes_page = CFG.notes_pages.length - 1;
+    }
+    editor.innerHTML = CFG.notes_pages[CFG.notes_page] ?? '';
+    renderNotesPager(); persist();
+  });
+  // 输入即存（防抖，只存当前页）；粘贴强制纯文本，避免外部样式污染
+  editor.addEventListener('input', notesPersist);
+  editor.addEventListener('paste', e => {
+    e.preventDefault();
+    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+  });
+  // 光标处命令状态回显（B/I/S 生效中高亮）
+  document.addEventListener('selectionchange', () => {
+    if (!document.activeElement || document.activeElement !== editor) return;
+    document.querySelectorAll('.notes-toolbar .nt-btn[data-cmd]').forEach(btn => {
+      try { btn.classList.toggle('on', document.queryCommandState(btn.dataset.cmd)); }
+      catch (e) { /* 部分命令不支持状态查询，忽略 */ }
+    });
+  });
+  let t = null;
+  function notesPersist() {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      CFG.notes_pages[CFG.notes_page] = editor.innerHTML;
+      persist();
+    }, 300);
+  }
+})();
+
+/* ========== 模态组件（Promise 化，替代原生 prompt/confirm） ========== */
+
+let modalCloseTimer = null;
+
+function closeModal() {
+  const mask = $('#modal-mask');
+  if (mask.classList.contains('closing')) return;    // 防重入（Enter 连击）
+  mask.classList.add('closing');                     // 先播 150ms 出场动画再摘 show
+  $('#modal').classList.remove('wide');              // 日报向导宽模态标志一并还原
+  clearTimeout(modalCloseTimer);
+  modalCloseTimer = setTimeout(() => mask.classList.remove('show', 'closing'), 160);
+}
+
+function reopenModal() {
+  /* closeModal 出场动画期间立即重开模态（设置返回向导场景）。
+     竞态实锤 2026-09-07：设置关闭走 closeModal+60ms 后重建向导，closeModal 的 160ms
+     延迟摘除回调晚于向导重开执行，把刚显示的日报弹窗又关掉了——重开前必须先取消挂起的回调 */
+  clearTimeout(modalCloseTimer); modalCloseTimer = null;
+  const mask = $('#modal-mask');
+  mask.classList.remove('closing');
+  mask.classList.add('show');
+}
+
+function showInput(title, label, value) {
+  return new Promise(resolve => {
+    const mask = $('#modal-mask'), m = $('#modal');
+    m.innerHTML = `<h3>${title}</h3><input id="modal-in" placeholder="${label}" value="${value.replace(/"/g, '&quot;')}">
+      <div class="err" id="modal-err"></div>
+      <div class="btns"><button id="m-cancel">取消</button><button class="primary" id="m-ok">确定</button></div>`;
+    mask.classList.add('show');
+    const input = $('#modal-in'); input.focus(); input.select();
+    const done = v => { closeModal(); resolve(v); };
+    $('#m-ok').addEventListener('click', () => {
+      const v = input.value.trim();
+      if (!v) return $('#modal-err').textContent = '名称不能为空';
+      done(v);
+    });
+    $('#m-cancel').addEventListener('click', () => done(null));
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') $('#m-ok').click();
+      if (ev.key === 'Escape') done(null);
+    });
+  });
+}
+function showConfirm(title, body) {
+  return new Promise(resolve => {
+    const mask = $('#modal-mask'), m = $('#modal');
+    m.innerHTML = `<h3>${title}</h3><p class="body">${body}</p><div class="err"></div>
+      <div class="btns"><button id="m-cancel">取消</button><button class="primary" id="m-ok">确定</button></div>`;
+    mask.classList.add('show');
+    const done = v => { closeModal(); resolve(v); };
+    $('#m-ok').addEventListener('click', () => done(true));
+    $('#m-cancel').addEventListener('click', () => done(false));
+  });
+}
+
+/* ========== 启动（pywebview 桥注入存在竞态：WebView2 的文档创建前脚本注册晚于
+   首次导航时，本页面会完全错过注入——事件等待之外再加轮询双保险） ========== */
+
+let booted = false;
+function boot() {
+  if (booted || !(window.pywebview && window.pywebview.api)) return;
+  booted = true;
+  api = pywebview.api;
+  loadData().catch(() => toast('数据加载失败'));
+}
+window.addEventListener('pywebviewready', boot);
+let waited = 0;
+const poll = setInterval(() => {
+  if (booted) { clearInterval(poll); return; }
+  if (window.pywebview && window.pywebview.api) { clearInterval(poll); boot(); }
+  else if (++waited > 300) clearInterval(poll);   // 30 秒放弃（浏览器直接打开等场景）
+}, 100);
+// 连接中提示（桥就绪后由 loadData 渲染覆盖）
+if (!(window.pywebview && window.pywebview.api)) {
+  $('#grid').innerHTML = '<div class="empty">正在连接本地服务…（若长时间无响应，请通过 启动.bat 启动）</div>';
+}
+// 面板每次唤起时自感知刷新：SetForegroundWindow 成功 → window focus 事件（主通道）
+// + visibilitychange（屏显状态变化时，兜底通道）。热键线程 evaluate_js 会概率性卡死，已弃用
+window.addEventListener('focus', () => { if (api) loadData().catch(() => {}); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    document.body.classList.remove('app-in');   // 重放唤起入场动画
+    void document.body.offsetWidth;
+    document.body.classList.add('app-in');
+    if (api) loadData().catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
